@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<iwb xmlns="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:ub="http://uniboard.mnemis.com/document" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:iwb="http://www.becta.org.uk/iwb" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <iwb:meta about="http://uniboard.mnemis.com/document/f3aaee52-add8-40cc-a3d3-8b287a664dfe"/>
+    <iwb:meta dc:title="24 Feb 2012 20:21:40"/>
+    <iwb:meta dc:date="2012-02-24"/>
+    <iwb:meta dc:format="image/svg+xml"/>
+    <iwb:meta dc:identifier="http://uniboard.mnemis.com/document/f3aaee52-add8-40cc-a3d3-8b287a664dfe"/>
+    <iwb:meta ub:version="4.5.0"/>
+    <iwb:meta ub:updated-at="2012-02-24T18:23:00ZZ"/>
+    <svg:svg viewbox="0 0 1280 960">
+        <svg:text/>
+        <svg:image/>
+        <svg:polyline/>
+    </svg:svg>
+</iwb>
