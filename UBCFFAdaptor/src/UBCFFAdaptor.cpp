@@ -3,6 +3,15 @@
 #include <QtCore>
 #include <QtXml>
 
+#include "UBGlobals.h"
+
+THIRD_PARTY_WARNINGS_DISABLE
+#include "quazip.h"
+#include "quazipfile.h"
+#include "quazipfileinfo.h"
+THIRD_PARTY_WARNINGS_ENABLE
+
+
 // Constant names. Use only them instead const char* in each function
 
 // Constant fileNames;
@@ -71,11 +80,9 @@ const QString pageAlias = "page";
 const QString pageFileExtentionUBZ = "svg";
 
 
-UBCFFAdaptor::UBCFFAdaptor() :
-    converter(0)
-{
+UBCFFAdaptor::UBCFFAdaptor()
+{}
 
-}
 bool UBCFFAdaptor::convertUBZToIWB(const QString &from, const QString &to)
 {
     qDebug() << "starting converion from" << from << "to" << to;
@@ -85,7 +92,7 @@ bool UBCFFAdaptor::convertUBZToIWB(const QString &from, const QString &to)
         qDebug() << "File specified is dir, continuing convertion";
         source = from;
     } else {
-        source = uncompressZip();
+        source = uncompressZip(from);
         if (!source.isNull()) qDebug() << "File specified is zip file. Uncompressed to tmp dir, continuing convertion";
     }
     if (source.isNull()) {
@@ -93,18 +100,290 @@ bool UBCFFAdaptor::convertUBZToIWB(const QString &from, const QString &to)
         return false;
     }
 
-    UBToCFFConverter tmpConvertrer(from, to);
-    if (!tmpConvertrer) {
-        qDebug() << "The convertrer class is invalid, stopping conversion";
+    QString tmpDestination = createNewTmpDir();
+    if (tmpDestination.isNull()) {
+        qDebug() << "can't create temp destination folder. Stopping parsing...";
         return false;
     }
-    tmpConvertrer.parse();
+
+    UBToCFFConverter tmpConvertrer(source, tmpDestination);
+    if (!tmpConvertrer) {
+        qDebug() << "The convertrer class is invalid, stopping conversion. Error message" << tmpConvertrer.lastErrStr();
+        return false;
+    }
+    if (!tmpConvertrer.parse()) {
+        return false;
+    }
+
+    compressZip(tmpDestination, to);
+
+    //Cleanning tmp souces in filesystem
+    if (!freeDir(source))
+        qDebug() << "can't delete tmp directory" << QDir(source).absolutePath() << "try to delete them manually";
+
+    if (!freeDir(tmpDestination))
+        qDebug() << "can't delete tmp directory" << QDir(tmpDestination).absolutePath() << "try to delete them manually";
 
     return true;
 }
 
+QString UBCFFAdaptor::uncompressZip(const QString &zipFile)
+{
+    QuaZip zip(zipFile);
+
+    if(!zip.open(QuaZip::mdUnzip)) {
+        qWarning() << "Import failed. Cause zip.open(): " << zip.getZipError();
+        return QString();
+    }
+
+    zip.setFileNameCodec("UTF-8");
+    QuaZipFileInfo info;
+    QuaZipFile file(&zip);
+
+    //create unique cff document root fodler
+    QString documentRootFolder = createNewTmpDir();
+
+    if (documentRootFolder.isNull()) {
+        qDebug() << "can't create tmp directory for zip file" << zipFile;
+        return QString();
+    }
+
+    QDir rootDir(documentRootFolder);
+    QFile out;
+    char c;
+    bool allOk = true;
+    for(bool more = zip.goToFirstFile(); more; more=zip.goToNextFile()) {
+        if(!zip.getCurrentFileInfo(&info)) {
+            qWarning() << "Import failed. Cause: getCurrentFileInfo(): " << zip.getZipError();
+            allOk = false;
+            break;
+        }
+        if(!file.open(QIODevice::ReadOnly)) {
+            allOk = false;
+            break;
+        }
+        file.open(QIODevice::ReadOnly);
+        if(file.getZipError()!= UNZ_OK) {
+            qWarning() << "Import failed. Cause: file.getFileName(): " << zip.getZipError();
+            allOk = false;
+            break;
+        }
+
+        QString newFileName = documentRootFolder + "/" + file.getActualFileName();
+
+        QFileInfo newFileInfo(newFileName);
+        rootDir.mkpath(newFileInfo.absolutePath());
+
+        out.setFileName(newFileName);
+        out.open(QIODevice::WriteOnly);
+
+        while(file.getChar(&c))
+            out.putChar(c);
+
+        out.close();
+
+        if(file.getZipError()!=UNZ_OK) {
+            qWarning() << "Import failed. Cause: " << zip.getZipError();
+            allOk = false;
+            break;
+        }
+        if(!file.atEnd()) {
+            qWarning() << "Import failed. Cause: read all but not EOF";
+            allOk = false;
+            break;
+        }
+        file.close();
+
+        if(file.getZipError()!=UNZ_OK) {
+            qWarning() << "Import failed. Cause: file.close(): " <<  file.getZipError();
+            allOk = false;
+            break;
+        }
+    }
+
+    if (!allOk) {
+        out.close();
+        file.close();
+        zip.close();
+        return QString();
+    }
+
+    if(zip.getZipError()!=UNZ_OK) {
+        qWarning() << "Import failed. Cause: zip.close(): " << zip.getZipError();
+        return QString();
+    }
+
+    return documentRootFolder;
+}
+
+bool UBCFFAdaptor::compressZip(const QString &source, const QString &destination)
+{
+    QDir toDir = QFileInfo(destination).dir();
+    if (!toDir.exists())
+        if (!QDir().mkpath(toDir.absolutePath())) {
+            qDebug() << "can't create destination folder to uncompress file";
+            return false;
+        }
+
+    QuaZip zip(destination);
+    zip.setFileNameCodec("UTF-8");
+    if(!zip.open(QuaZip::mdCreate)) {
+        qDebug("Export failed. Cause: zip.open(): %d", zip.getZipError());
+        return false;
+    }
+
+    QuaZipFile outZip(&zip);
+
+    QFileInfo sourceInfo(source);
+    if (sourceInfo.isDir()) {
+        if (!compressDir(QFileInfo(source).absoluteFilePath(), "", &outZip))
+            return false;
+    } else if (sourceInfo.isFile()) {
+        if (!compressFile(QFileInfo(source).absoluteFilePath(), "", &outZip))
+            return false;
+    }
+
+    return true;
+}
+
+bool UBCFFAdaptor::compressDir(const QString &dirName, const QString &parentDir, QuaZipFile *outZip)
+{
+    QFileInfoList dirFiles = QDir(dirName).entryInfoList(QDir::AllDirs | QDir::Files | QDir::NoDotAndDotDot);
+    QListIterator<QFileInfo> iter(dirFiles);
+    while (iter.hasNext()) {
+        QFileInfo curFile = iter.next();
+
+        if (curFile.isDir()) {
+            if (!compressDir(curFile.absoluteFilePath(), parentDir + curFile.dir().dirName() + "/", outZip)) {
+                qDebug() << "error at compressing dir" << curFile.absoluteFilePath();
+                return false;
+            }
+        } else if (curFile.isFile()) {
+            if (!compressFile(curFile.absoluteFilePath(), parentDir, outZip)) {
+               return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+bool UBCFFAdaptor::compressFile(const QString &fileName, const QString &parentDir, QuaZipFile *outZip)
+{
+    QFile sourceFile(fileName);
+
+    if(!sourceFile.open(QIODevice::ReadOnly)) {
+        qDebug() << "Compression of file" << sourceFile.fileName() << " failed. Cause: inFile.open(): " << sourceFile.errorString();
+        return false;
+    }
+
+    if(!outZip->open(QIODevice::WriteOnly, QuaZipNewInfo(parentDir + QFileInfo(fileName).fileName(), sourceFile.fileName()))) {
+        qDebug() << "Compression of file" << sourceFile.fileName() << " failed. Cause: outFile.open(): " << outZip->getZipError();
+        sourceFile.close();
+        return false;
+    }
+
+    outZip->write(sourceFile.readAll());
+    if(outZip->getZipError() != UNZ_OK) {
+        qDebug() << "Compression of file" << sourceFile.fileName() << " failed. Cause: outFile.write(): " << outZip->getZipError();
+
+        sourceFile.close();
+        outZip->close();
+        return false;
+    }
+
+    if(outZip->getZipError() != UNZ_OK)
+    {
+        qWarning() << "Compression of file" << sourceFile.fileName() << " failed. Cause: outFile.close(): " << outZip->getZipError();
+
+        sourceFile.close();
+        outZip->close();
+        return false;
+    }
+
+    outZip->close();
+    sourceFile.close();
+
+    return true;
+}
+
+QString UBCFFAdaptor::createNewTmpDir()
+{
+    int tmpNumber = 0;
+    QDir systemTmp = QDir::temp();
+
+    while (true) {
+        QString dirName = QString("CFF_adaptor_filedata_store%1.%2")
+                .arg(QDateTime::currentDateTime().toString("dd_MM_yyyy_HH-mm"))
+                .arg(tmpNumber++);
+        if (!systemTmp.exists(dirName)) {
+            if (systemTmp.mkdir(dirName)) {
+                QString result = systemTmp.absolutePath() + "/" + dirName;
+                tmpDirs.append(result);
+                return result;
+            } else {
+                qDebug() << "Can't create temporary dir maybe due to permissions";
+                return QString();
+            }
+        } else if (tmpNumber == 10) {
+            qWarning() << "Import failed. Failed to create temporary file ";
+            return QString();
+        }
+        tmpNumber++;
+    }
+
+    return QString();
+}
+bool UBCFFAdaptor::deleteDir(const QString& pDirPath) const
+{
+    if (pDirPath == "" || pDirPath == "." || pDirPath == "..")
+        return false;
+
+    QDir dir(pDirPath);
+
+    if (dir.exists())
+    {
+        foreach(QFileInfo dirContent, dir.entryInfoList(QDir::Files | QDir::Dirs
+                | QDir::NoDotAndDotDot | QDir::Hidden | QDir::System , QDir::Name))
+        {
+            if (dirContent.isDir())
+            {
+                deleteDir(dirContent.absoluteFilePath());
+            }
+            else
+            {
+                if (!dirContent.dir().remove(dirContent.fileName()))
+                {
+                    return false;
+                }
+            }
+        }
+    }
+
+    return dir.rmdir(pDirPath);
+}
+bool UBCFFAdaptor::freeDir(const QString &dir)
+{
+    bool result = true;
+    if (!deleteDir(dir))
+        result = false;
+
+    tmpDirs.removeAll(QDir(dir).absolutePath());
+
+    return result;
+}
+void UBCFFAdaptor::freeTmpDirs()
+{
+    foreach (QString dir, tmpDirs)
+        freeDir(dir);
+}
+
+UBCFFAdaptor::~UBCFFAdaptor()
+{
+    freeTmpDirs();
+}
+
 UBCFFAdaptor::UBToCFFConverter::UBToCFFConverter(const QString &source, const QString &destination)
-    : mDataModel(0)
 {
     sourcePath = source;
     destinationPath = destination;
@@ -511,9 +790,16 @@ UBCFFAdaptor::UBToCFFConverter::~UBToCFFConverter()
 }
 bool UBCFFAdaptor::UBToCFFConverter::isValid() const
 {
-    return QFileInfo(sourcePath).exists()
-            && QFileInfo(sourcePath).isDir()
-            && errorStr == noErrorMsg;
+    bool result = QFileInfo(sourcePath).exists()
+               && QFileInfo(sourcePath).isDir()
+               && errorStr == noErrorMsg;
+
+    if (!result) {
+        qDebug() << "specified data is not valid";
+        errorStr = "ValidateDataError";
+    }
+
+    return result;
 }
 
 void UBCFFAdaptor::UBToCFFConverter::fillNamespaces()

@@ -7,22 +7,32 @@
 
 class QDomDocument;
 class QDomElement;
+class QuaZipFile;
 
 class UBCFFADAPTORSHARED_EXPORT UBCFFAdaptor {
     class UBToCFFConverter;
 
+
 public:
     UBCFFAdaptor();
+    ~UBCFFAdaptor();
 
     bool convertUBZToIWB(const QString &from, const QString &to);
+    bool deleteDir(const QString& pDirPath) const;
 
 private:
-    QString uncompressZip() {return QString();}
+    QString uncompressZip(const QString &zipFile);
+    bool compressZip(const QString &source, const QString &destination);
+    bool compressDir(const QString &dirName, const QString &parentDir, QuaZipFile *outZip);
+    bool compressFile(const QString &fileName, const QString &parentDir, QuaZipFile *outZip);
+
+    QString createNewTmpDir();
+    bool freeDir(const QString &dir);
+    void freeTmpDirs();
+
 
 private:
-    UBToCFFConverter *converter;
-
-
+    QStringList tmpDirs;
 
 private:
     class UBToCFFConverter {
@@ -70,7 +80,7 @@ private:
         QRect mViewbox; //Main viewbox parameter for CFF
         QString sourcePath; // dir with unpacked source data (ubz)
         QString destinationPath; //dir with unpacked destination data (iwb)
-        QString errorStr; // last error string message
+        mutable QString errorStr; // last error string message
 
     public:
         operator bool() const {return isValid();}

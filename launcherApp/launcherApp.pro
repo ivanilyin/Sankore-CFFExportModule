@@ -16,5 +16,4 @@ TEMPLATE = app
 INCLUDEPATH += "../UBCFFAdaptor/src"
 LIBS +=      "-L../UBCFFAdaptor/lib/linux" "-lCFF_Adaptor"
 
-
 SOURCES += main.cpp
