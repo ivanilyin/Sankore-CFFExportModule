@@ -14,6 +14,11 @@ CONFIG   -= app_bundle
 TEMPLATE = app
 
 INCLUDEPATH += "../UBCFFAdaptor/src"
-LIBS +=      "-L../UBCFFAdaptor/lib/linux" "-lCFF_Adaptor"
+
+
+win32:        LIBS += "-L../UBCFFAdaptor/lib/win32" "-lCFF_Adaptor"
+linux-g++-32: LIBS += "-L../UBCFFAdaptor/lib/linux" "-lCFF_Adaptor"
+linux-g++-64: LIBS += "-L../UBCFFAdaptor/lib/linux" "-lCFF_Adaptor"
+linux-g++:    LIBS += "-L../UBCFFAdaptor/lib/linux" "-lCFF_Adaptor"
 
 SOURCES += main.cpp

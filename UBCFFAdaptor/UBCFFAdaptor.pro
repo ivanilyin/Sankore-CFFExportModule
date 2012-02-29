@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-win32: SUB_DIR = win
+win32: SUB_DIR = win32
 macx: SUB_DIR = macx
 linux-g++: SUB_DIR = linux
 linux-g++-32: SUB_DIR = linux
@@ -18,14 +18,18 @@ INCLUDEPATH += src\
 
 LIBS        += "-L$$QUAZIP_DIR/lib/$$SUB_DIR" "-lquazip"
 
-
 QT       += xml xmlpatterns core
 QT       -= gui
 
 TARGET = CFF_Adaptor
 TEMPLATE = lib
+win32{
+    CONFIG += dll
+    DLLDESTDIR = $$PWD/dll
+}
 
-DEFINES += CFF_ADAPTOR_LIBRARY
+DEFINES += UBCFFADAPTOR_LIBRARY
+DEFINES += NO_THIRD_PARTY_WARNINGS
 
 SOURCES += \
     src/UBCFFAdaptor.cpp
@@ -47,5 +51,3 @@ unix:!symbian {
 OBJECTS_DIR = $$PWD/objects
 MOC_DIR = $$PWD/moc
 DESTDIR = $$PWD/lib/$$SUB_DIR
-
-DEFINES += NO_THIRD_PARTY_WARNINGS
