@@ -162,7 +162,6 @@ QString UBCFFAdaptor::uncompressZip(const QString &zipFile)
             allOk = false;
             break;
         }
-        file.open(QIODevice::ReadOnly);
         if(file.getZipError()!= UNZ_OK) {
             qWarning() << "Import failed. Cause: file.getFileName(): " << zip.getZipError();
             allOk = false;
