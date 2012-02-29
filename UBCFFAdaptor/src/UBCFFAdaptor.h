@@ -67,6 +67,7 @@ private:
         bool parseUBZPolygon(const QDomElement &element);
         bool parseUBZPolyline(const QDomElement &element);
         bool parseUBZLine(const QDomElement &element);
+        bool addElementToResultModel(QDomElement &element) { return false; };
 
 
         inline QRect getViewboxRect(const QString &element) const;
