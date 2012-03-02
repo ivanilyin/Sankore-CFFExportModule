@@ -48,17 +48,36 @@ const QString tIWBText = "text";
 const QString tIWBPolyline = "polyline";
 const QString tIWBPolygon = "polygon";
 const QString tIWBFlash = "video";
+const QString tIWBRect = "rect";
+const QString tIWBLine = "line";
 
 // Attributes names
 const QString aAbout  = "about";
 const QString aIWBViewBox = "viewbox";
 const QString aUBZViewBox = "viewBox";
 const QString aDarkBackground = "dark-background";
+const QString aBackground = "background";
 const QString aCrossedBackground = "crossed-background";
 const QString aUBZType = "type";
+const QString aFill = "fill"; // IWB attribute contans color to fill
+
+const QString aID = "id";   // ID of any svg element can be placed in to iwb section
+const QString aRef = "ref"; // as reference for applying additional attributes
+
+const QString aX = "x";
+const QString aY = "y";
+const QString aWidth = "width";
+const QString aHeight = "height";
+const QString aStroke = "stroke";
+const QString aStrokeWidth = "stroke-width";
+const QString aPoints = "points";
+const QString aZLayer = "z-value";
+const QString aTransform = "transform";
 
 // Attribute values
 const QString avUBZText = "text";
+const QString avFalse = "false";
+const QString avTrue = "true";
 
 // Namespaces and prefixes
 const QString dcNS = "http://purl.org/dc/elements/1.1/";
@@ -78,6 +97,18 @@ const QString dimensionsDelimiter1 = "x";
 const QString dimensionsDelimiter2 = " ";
 const QString pageAlias = "page";
 const QString pageFileExtentionUBZ = "svg";
+
+const int iCrossSize = 32;
+const int iCrossWidth = 5;
+
+
+struct UBItemLayerType
+{
+    enum Enum
+    {
+        FixedBackground = -2000, Object = -1000, Graphic = 0, Tool = 1000, Control = 2000
+    };
+};
 
 
 UBCFFAdaptor::UBCFFAdaptor()
@@ -389,6 +420,7 @@ UBCFFAdaptor::UBToCFFConverter::UBToCFFConverter(const QString &source, const QS
 
     errorStr = noErrorMsg;
     mDataModel = new QDomDocument;
+
     mIWBContentWriter = new QXmlStreamWriter;
     mIWBContentWriter->setAutoFormatting(true);
 }
@@ -583,11 +615,7 @@ bool UBCFFAdaptor::UBToCFFConverter::parseSvgPageSection(const QDomElement &elem
     }
 
     if (element.hasAttribute(aDarkBackground)) {
-        if (!createDarkBackground(element)) return false;
-    }
-
-    if (element.hasAttribute(aCrossedBackground)) {
-        if (!createCrossedBackground(element)) return false;
+        if (!createBackground(element)) return false;
     }
 
     //Parsing svg children attributes
@@ -615,28 +643,121 @@ bool UBCFFAdaptor::UBToCFFConverter::parseGroupPageSection(const QDomElement &el
     return true;
 }
 
-bool UBCFFAdaptor::UBToCFFConverter::createDarkBackground(const QDomElement &element)
+bool UBCFFAdaptor::UBToCFFConverter::ibwSetElementAsBackground(QDomElement &element)
 {
-    Q_UNUSED(element)
-    qDebug() << "|creating element background";
-    if (false) {
-        qDebug() << "|error at creating element background";
-        errorStr = "CreatingElementBackgroundParsingError";
-        return false;
-    }
-    return true;
+    QDomElement iwbBackgroundElementPart;
+
+    iwbBackgroundElementPart.setTagName(tElement);
+    iwbBackgroundElementPart.setAttribute(aRef, element.attribute(aID));
+    iwbBackgroundElementPart.setAttribute(aBackground, avTrue);
+    iwbBackgroundElementPart.setAttribute(aZLayer, UBItemLayerType::FixedBackground);
+  
+    return addElementToResultModel(iwbBackgroundElementPart);
 }
 
-bool UBCFFAdaptor::UBToCFFConverter::createCrossedBackground(const QDomElement &element)
+bool UBCFFAdaptor::UBToCFFConverter::ibwAddLine(int x1, int y1, int x2, int y2, QString color, int width, bool isBackground)
 {
-    Q_UNUSED(element)
-    qDebug() << "|creating background grid";
-    if (false) {
-        qDebug() << "|error at creating background grid";
-        errorStr = "CreatingBackgroundGridImageParsingError";
-        return false;
+    bool bRet = true;
+
+    QDomElement svgBackgroundCrossPart;
+    QDomElement iwbBackgroundCrossPart;
+
+    QString sUUID = QUuid::createUuid().toString();
+
+    svgBackgroundCrossPart.setTagName(tIWBLine);
+
+    svgBackgroundCrossPart.setAttribute(aX+"1", x1);
+    svgBackgroundCrossPart.setAttribute(aY+"1", y1);  
+    svgBackgroundCrossPart.setAttribute(aX+"2", x2);
+    svgBackgroundCrossPart.setAttribute(aY+"2", y2);
+
+    svgBackgroundCrossPart.setAttribute(aStroke, color);
+    svgBackgroundCrossPart.setAttribute(aStrokeWidth, width);
+
+    svgBackgroundCrossPart.setAttribute(aID, sUUID);
+
+    if (isBackground)     
+        bRet = ibwSetElementAsBackground(svgBackgroundCrossPart);
+
+    bRet = addElementToResultModel(svgBackgroundCrossPart);
+
+    if (!bRet)
+    {
+        qDebug() << "|error at creating crosses on background";
+        errorStr = "CreatingCrossedBackgroundParsingError.";
     }
-    return true;
+
+    return bRet;
+}
+
+QString UBCFFAdaptor::UBToCFFConverter::convertTransformFromUBZ(QString ubzTransform)
+{
+    QString sRes;
+
+    return sRes;
+}
+
+bool UBCFFAdaptor::UBToCFFConverter::createBackground(const QDomElement &element)
+{
+    qDebug() << "|creating element background";
+
+    bool bRet = true;
+
+    QDomElement svgBackgroundElementPart;
+    QDomElement iwbBackgroundElementPart;
+    bool isDark = (avTrue == element.attribute(aDarkBackground));
+
+    svgBackgroundElementPart.setTagName(tIWBRect);
+    svgBackgroundElementPart.setAttribute(aFill, isDark ? "black" : "white");           
+
+    QRect bckRect(mViewbox);
+
+    if (0 <= mViewbox.topLeft().x())
+        bckRect.topLeft().setX(0);
+
+    if (0 <= mViewbox.topLeft().y())
+        bckRect.topLeft().setY(0);
+
+    QString sElementID = QUuid::createUuid().toString();
+
+    svgBackgroundElementPart.setAttribute(aID, sElementID);
+    svgBackgroundElementPart.setAttribute(aX, bckRect.x());
+    svgBackgroundElementPart.setAttribute(aY, bckRect.y());
+    svgBackgroundElementPart.setAttribute(aHeight, bckRect.height());
+    svgBackgroundElementPart.setAttribute(aWidth, bckRect.width());
+
+    bRet = ibwSetElementAsBackground(svgBackgroundElementPart);
+    bRet = addElementToResultModel(svgBackgroundElementPart);
+
+    if (!bRet)
+    {
+        qDebug() << "|error at creating element background";
+        errorStr = "CreatingElementBackgroundParsingError.";
+    }
+
+    bool isCrossed = (avTrue == element.attribute(aCrossedBackground));
+    if (isCrossed)
+    {
+        QString linesColor = isDark ? "white" : "blue";
+        for (int i = mViewbox.x(); i < mViewbox.x()+mViewbox.width(); i+=iCrossSize)
+        {
+            bRet = ibwAddLine(i, mViewbox.x(), i, mViewbox.x()+mViewbox.height(), linesColor, iCrossWidth, true);
+        }
+
+        for (int i = mViewbox.y(); i < mViewbox.y()+mViewbox.height(); i+=iCrossSize)
+        {
+            bRet = ibwAddLine(mViewbox.x(), i, mViewbox.x()+mViewbox.width(), i, linesColor, iCrossWidth, true);
+        }
+
+        if (!bRet)
+        {
+            qDebug() << "|error at creating crossed background";
+            errorStr = "CreatingElementBackgroundParsingError.";
+        }
+    }
+
+    
+    return bRet;
 }
 
 bool UBCFFAdaptor::UBToCFFConverter::parseSVGGGroup(const QDomElement &element)
@@ -665,7 +786,12 @@ bool UBCFFAdaptor::UBToCFFConverter::parseSVGGGroup(const QDomElement &element)
 bool UBCFFAdaptor::UBToCFFConverter::parseUBZImage(const QDomElement &element)
 {
     Q_UNUSED(element)
-    mIWBContentWriter->writeStartElement(svgIWBNS, tIWBImage);
+
+//     QDomElement iwbElementPart
+    
+    QString ubzTransform = element.attribute(aTransform);
+
+    QString transform = convertTransformFromUBZ(, ubzTransform);
 
     qDebug() << "|parsing image";
     if (false) {
@@ -673,8 +799,6 @@ bool UBCFFAdaptor::UBToCFFConverter::parseUBZImage(const QDomElement &element)
         errorStr = "ImageParsingError";
         return false;
     }
-    mIWBContentWriter->writeEndElement();
-
     return true;
 }
 bool UBCFFAdaptor::UBToCFFConverter::parseUBZVideo(const QDomElement &element)
@@ -757,19 +881,30 @@ bool UBCFFAdaptor::UBToCFFConverter::parseUBZPolygon(const QDomElement &element)
     }
     return true;
 }
-bool UBCFFAdaptor::UBToCFFConverter::parseUBZPolyline(const QDomElement &element){
-    Q_UNUSED(element)
+
+
+
+bool UBCFFAdaptor::UBToCFFConverter::parseUBZPolyline(const QDomElement &element)
+{
+    bool bRes = true;
+
+    QDomElement svgElementPart = element;
+    
+        
+
+    bRes = addElementToResultModel(svgElementPart);
+
     qDebug() << "||parsing polyline";
-    if (false) {
+    if (!bRes) {
         qDebug() << "||error at parsing polygon";
         errorStr = "PolylineParsingError";
-        return false;
-    }
-    return true;
+     }
+    return bRes;
 }
 
 bool UBCFFAdaptor::UBToCFFConverter::parseUBZLine(const QDomElement &element){
     Q_UNUSED(element)
+
     qDebug() << "||parsing line";
     if (false) {
         qDebug() << "||error at parsing polygon";

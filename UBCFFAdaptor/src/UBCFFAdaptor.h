@@ -54,8 +54,7 @@ private:
         bool parseSvgPageSection(const QDomElement &element);
         bool parseGroupPageSection(const QDomElement &element);
 
-        bool createDarkBackground(const QDomElement &element);
-        bool createCrossedBackground(const QDomElement &element);
+        bool createBackground(const QDomElement &element);
 
         bool parseSVGGGroup(const QDomElement &element);
         bool parseUBZImage(const QDomElement &element);
@@ -67,8 +66,13 @@ private:
         bool parseUBZPolygon(const QDomElement &element);
         bool parseUBZPolyline(const QDomElement &element);
         bool parseUBZLine(const QDomElement &element);
-        bool addElementToResultModel(QDomElement &element) { return false; };
+        bool addElementToResultModel(QDomElement &element){return true;}
 
+        bool ibwSetElementAsBackground(QDomElement &element);
+
+        bool ibwAddLine(int x1, int y1, int x2, int y2, QString color=QString(), int width=1, bool isBackground=false);
+
+        QString convertTransformFromUBZ(QString ubzTransform);
 
         inline QRect getViewboxRect(const QString &element) const;
         inline QString rectToIWBAttr(const QRect &rect) const;
