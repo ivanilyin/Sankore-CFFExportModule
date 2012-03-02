@@ -420,6 +420,7 @@ UBCFFAdaptor::UBToCFFConverter::UBToCFFConverter(const QString &source, const QS
 
     errorStr = noErrorMsg;
     mDataModel = new QDomDocument;
+    mResultDataModel = new QDomDocument;
 
     mIWBContentWriter = new QXmlStreamWriter;
     mIWBContentWriter->setAutoFormatting(true);
@@ -433,9 +434,50 @@ bool UBCFFAdaptor::UBToCFFConverter::parse()
     }
 
     qDebug() << "begin parsing ubz";
-    QFile outFile(destinationPath + "/" + fIWBContent);
+
+    if (!createXMLOutputPattern()) {
+        if (errorStr == noErrorMsg)
+            errorStr = "createXMLOutputPatternError";
+        return false;
+    }
+
+    QFile QDomModelFile(contentIWBFileName());
+    if (!QDomModelFile.open(QIODevice::ReadWrite | QIODevice::Text)) {
+        qDebug() << "can't open pattern file for writing ";
+        errorStr = "OpenPatternFileError";
+        return false;
+    }
+
+    int errorLine, errorColumn;
+    if (!mResultDataModel->setContent(&QDomModelFile, true, &errorStr, &errorLine, &errorColumn)) {
+            qWarning() << "Error:Parseerroratline" << errorLine << ","
+                           << "column" << errorColumn << ":" << errorStr;
+            return false;
+    }
+
+    if (!parseMetadata()) {
+        if (errorStr == noErrorMsg)
+            errorStr = "MetadataParsingError";
+        return false;
+    }
+
+    if (!parseContent()) {
+        if (errorStr == noErrorMsg)
+            errorStr = "ContentParsingError";
+        return false;
+    }
+
+    qDebug() << "finished with success";
+
+    return true;
+}
+bool UBCFFAdaptor::UBToCFFConverter::createXMLOutputPattern()
+{
+    QFile outFile(contentIWBFileName());
     if (!outFile.open(QIODevice::WriteOnly| QIODevice::Text)) {
         qDebug() << "can't open output file for writing";
+        errorStr = "createXMLOutputPatternError";
+        return false;
     }
     mIWBContentWriter->setDevice(&outFile);
 
@@ -444,25 +486,13 @@ bool UBCFFAdaptor::UBToCFFConverter::parse()
 
     fillNamespaces();
 
-    if (!parseMetadata()) {
-        if (errorStr == noErrorMsg)
-            errorStr = "MetadataParsingError";
-        return false;
-    }
-    else if (!parseContent()) {
-        if (errorStr == noErrorMsg)
-            errorStr = "ContentParsingError";
-        return false;
-    }
     mIWBContentWriter->writeEndElement();
     mIWBContentWriter->writeEndDocument();
 
     outFile.close();
-
-    qDebug() << "finished with success";
-
     return true;
 }
+
 bool UBCFFAdaptor::UBToCFFConverter::parseMetadata()
 {
     int errorLine, errorColumn;
@@ -479,22 +509,27 @@ bool UBCFFAdaptor::UBToCFFConverter::parseMetadata()
         return false;
     }
 
-    QDomElement nextElement = mDataModel->documentElement();
+    QDomElement nextInElement = mDataModel->documentElement();
+    QDomElement parentOutElement = mResultDataModel->documentElement().firstChildElement();
+    if (parentOutElement.isNull()) {
+        qDebug() << "The content.xml result document patern is invalid";
+//        return false;
+    }
 
-    nextElement = nextElement.firstChildElement(tDescription);
-    if (!nextElement.isNull()) {
+    nextInElement = nextInElement.firstChildElement(tDescription);
+    if (!nextInElement.isNull()) {
 
         mIWBContentWriter->writeStartElement(iwbNS, tIWBMeta);
-        mIWBContentWriter->writeAttribute(aAbout, nextElement.attribute(aAbout));
+        mIWBContentWriter->writeAttribute(aAbout, nextInElement.attribute(aAbout));
         mIWBContentWriter->writeEndElement();
 
-        nextElement = nextElement.firstChildElement();
-        while (!nextElement.isNull()) {
+        nextInElement = nextInElement.firstChildElement();
+        while (!nextInElement.isNull()) {
 
-            QString textContent = nextElement.text();
+            QString textContent = nextInElement.text();
             if (!textContent.trimmed().isEmpty()) {
-                if (nextElement.tagName() == tUBZSize) { //getting main viewbox rect since for CFF specificaton we have static viewbox
-                    QRect tmpRect = getViewboxRect(nextElement.text());
+                if (nextInElement.tagName() == tUBZSize) { //getting main viewbox rect since for CFF specificaton we have static viewbox
+                    QRect tmpRect = getViewboxRect(nextInElement.text());
                     if (!tmpRect.isNull()) {
                         mViewbox = tmpRect;
                     } else {
@@ -504,12 +539,12 @@ bool UBCFFAdaptor::UBToCFFConverter::parseMetadata()
                     }
                 } else {
                     mIWBContentWriter->writeStartElement(iwbNS, tIWBMeta);
-                    mIWBContentWriter->writeAttribute(nextElement.namespaceURI(), nextElement.tagName(), textContent);
+                    mIWBContentWriter->writeAttribute(nextInElement.namespaceURI(), nextInElement.tagName(), textContent);
                     mIWBContentWriter->writeEndElement();
                 }
 
             }
-            nextElement = nextElement.nextSiblingElement();
+            nextInElement = nextInElement.nextSiblingElement();
         }
     }
 
@@ -950,6 +985,10 @@ QString UBCFFAdaptor::UBToCFFConverter::digitFileFormat(int digit) const
 {
     return QString("%1").arg(digit, 3, 10, QLatin1Char('0'));
 }
+QString UBCFFAdaptor::UBToCFFConverter::contentIWBFileName() const{
+    return destinationPath + "/" + fIWBContent;
+}
+
 
 //Setting viewbox rectangle
 QRect UBCFFAdaptor::UBToCFFConverter::getViewboxRect(const QString &element) const

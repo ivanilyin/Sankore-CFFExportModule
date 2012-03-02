@@ -12,7 +12,6 @@ class QuaZipFile;
 class UBCFFADAPTORSHARED_EXPORT UBCFFAdaptor {
     class UBToCFFConverter;
 
-
 public:
     UBCFFAdaptor();
     ~UBCFFAdaptor();
@@ -30,7 +29,6 @@ private:
     bool freeDir(const QString &dir);
     void freeTmpDirs();
 
-
 private:
     QStringList tmpDirs;
 
@@ -46,6 +44,8 @@ private:
 
     private:
         void fillNamespaces();
+
+        bool createXMLOutputPattern();
 
         bool parseMetadata();
         bool parseContent();
@@ -78,9 +78,11 @@ private:
         inline QString rectToIWBAttr(const QRect &rect) const;
         inline QString digitFileFormat(int num) const;
         inline bool strToBool(const QString &in) const {return in == "true";}
+        QString contentIWBFileName() const;
 
     private:
         QDomDocument *mDataModel; //model for reading indata
+        QDomDocument *mResultDataModel; //result DOM for saving
         QXmlStreamWriter *mIWBContentWriter; //stream to write outdata
         QRect mViewbox; //Main viewbox parameter for CFF
         QString sourcePath; // dir with unpacked source data (ubz)
