@@ -791,7 +791,7 @@ bool UBCFFAdaptor::UBToCFFConverter::parseUBZImage(const QDomElement &element)
     
     QString ubzTransform = element.attribute(aTransform);
 
-    QString transform = convertTransformFromUBZ(, ubzTransform);
+    QString transform = convertTransformFromUBZ(ubzTransform);
 
     qDebug() << "|parsing image";
     if (false) {
