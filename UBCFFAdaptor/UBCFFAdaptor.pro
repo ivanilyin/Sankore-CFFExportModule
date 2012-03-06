@@ -19,7 +19,7 @@ INCLUDEPATH += src\
 LIBS        += "-L$$QUAZIP_DIR/lib/$$SUB_DIR" "-lquazip"
 
 QT       += xml xmlpatterns core
-QT       -= gui
+QT       += gui
 
 TARGET = CFF_Adaptor
 TEMPLATE = lib

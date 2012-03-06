@@ -2,6 +2,7 @@
 
 #include <QtCore>
 #include <QtXml>
+#include <QTransform>
 
 #include "UBGlobals.h"
 
@@ -11,6 +12,8 @@ THIRD_PARTY_WARNINGS_DISABLE
 #include "quazipfileinfo.h"
 THIRD_PARTY_WARNINGS_ENABLE
 
+
+#define PI 3.1415926535
 
 // Constant names. Use only them instead const char* in each function
 
@@ -59,10 +62,13 @@ const QString aDarkBackground = "dark-background";
 const QString aBackground = "background";
 const QString aCrossedBackground = "crossed-background";
 const QString aUBZType = "type";
+const QString aUBZUuid = "uuid";
 const QString aFill = "fill"; // IWB attribute contans color to fill
 
 const QString aID = "id";   // ID of any svg element can be placed in to iwb section
 const QString aRef = "ref"; // as reference for applying additional attributes
+const QString aHref = "href"; // reference to file
+const QString aSrc = "src";
 
 const QString aX = "x";
 const QString aY = "y";
@@ -73,6 +79,8 @@ const QString aStrokeWidth = "stroke-width";
 const QString aPoints = "points";
 const QString aZLayer = "z-value";
 const QString aTransform = "transform";
+const QString aLocked = "locked";
+
 
 // Attribute values
 const QString avUBZText = "text";
@@ -100,6 +108,87 @@ const QString pageFileExtentionUBZ = "svg";
 
 const int iCrossSize = 32;
 const int iCrossWidth = 5;
+
+// Image formats supported by CFF exclude wgt. Wgt is widget from sankore, who places as it png preview.
+const QString iwbElementImage(" \
+wgt \
+jpeg \
+jpg \
+bmp \
+gif \
+wmf \
+emf \
+png \
+tif \
+tiff \
+");
+
+// Video formats supported by CFF
+const QString iwbElementVideo(" \
+mpg \
+mpeg \
+swf \
+");
+
+// Audio formats supported by CFF
+const QString iwbElementAudio(" \
+mp3 \
+wav \
+");
+
+const QString cffSupportedFileFormats(iwbElementImage + iwbElementVideo + iwbElementAudio);
+
+
+// 1 to 1 copy to SVG section
+const QString iwbElementAttributes(" \
+background, \
+background-fill, \
+background-posture, \
+flip, \
+freehand, \
+highlight, \
+highlight-fill, \
+list-style-type, \
+list-style-type-fill, \
+locked, \
+replicate, \
+revealer, \
+stroke-lineshape-start, \
+stroke-lineshape-end \
+");
+
+// cannot be copied 1 to 1 to SVG section
+const QString ubzElementAttributesToConvert(" \
+xlink:href \
+src \
+transform \
+");
+
+// additional attributes. Have references in SVG section.
+const QString svgElementAttributes(" \
+points \
+fill \
+fill-opacity \
+stroke \
+stroke-dasharray \
+stroke-linecap \
+stroke-opacity \
+stroke-width \
+stroke_linejoin \
+requiredExtensions \
+viewbox \
+x \
+y \
+height \
+width \
+font-family \
+font-size \
+font-style \
+font-weight \
+font-stretch \
+text-align \
+");
+
 
 
 struct UBItemLayerType
@@ -374,7 +463,7 @@ bool UBCFFAdaptor::deleteDir(const QString& pDirPath) const
     if (dir.exists())
     {
         foreach(QFileInfo dirContent, dir.entryInfoList(QDir::Files | QDir::Dirs
-                | QDir::NoDotAndDotDot | QDir::Hidden | QDir::System , QDir::Name))
+                | QDir::NoDotAndDotDot | QDir::Hidden | QDir::System, QDir::Name))
         {
             if (dirContent.isDir())
             {
@@ -678,6 +767,140 @@ bool UBCFFAdaptor::UBToCFFConverter::parseGroupPageSection(const QDomElement &el
     return true;
 }
 
+QString UBCFFAdaptor::UBToCFFConverter::getDstContentFolderName(QString elementType)
+{
+    QString sRet;
+    QString sDstContentFolderName;
+
+    // widgets must be saved as .png images.
+    if (("image" == elementType) || ("foreignObject" == elementType))
+        sDstContentFolderName = "images";
+    else
+    if ("video" == elementType)
+        sDstContentFolderName = "videos";    
+    else
+    if ("audio" == elementType)
+        sDstContentFolderName = "audios";
+
+    sRet = sDstContentFolderName;
+ 
+    return sRet;
+}
+
+QString UBCFFAdaptor::UBToCFFConverter::getSrcContentFolderName(QString href)
+{
+    QString sRet;
+
+    QStringList ls = href.split("/");
+    if (0 < ls.count())
+        sRet = ls.at(ls.count()-1);
+    
+    sRet = href.remove(sRet);
+
+    if (sRet.endsWith("/"))
+        sRet.remove("/");
+
+    return sRet;   
+}
+
+QString UBCFFAdaptor::UBToCFFConverter::getFileNameFromPath(QString sPath)
+{
+    QString sRet;
+    QStringList sl = sPath.split("/",QString::SkipEmptyParts);
+
+    if (0 < sl.count())
+    {
+        QString name = sl.at(sl.count()-1);
+
+        // if item is widtet - take preview.       
+        if(name.endsWith(".wgt"))
+        {
+            qDebug() << "element is widget";
+            name.remove(".wgt");
+            name.remove("{");
+            name.remove("}");
+            name += ".png";
+        }
+        else    // .svg must be saved as .png because of it is not suppotrted in CFF.
+        if(name.endsWith(".svg"))
+        {
+            qDebug() << "element is svg image";
+            name.remove(".svg");
+            name.remove("{");
+            name.remove("}");
+            name += ".png";
+        }
+
+        sRet = name;
+    }
+    return sRet;
+}
+
+QString UBCFFAdaptor::UBToCFFConverter::getElementTypeFromUBZ(const QDomElement &element)
+{
+    QString sRet;
+    if (tUBZForeignObject == element.tagName())
+    {
+        QString sPath;
+        if (element.hasAttribute(aUBZType))
+            sRet= element.attribute(aUBZType);
+        else
+        {      
+            if (element.hasAttribute(aSrc))
+                sPath = element.attribute(aSrc);
+            else 
+            if (element.hasAttribute(aHref))
+                sPath = element.attribute(aHref);
+
+            QStringList tsl = sPath.split(".", QString::SkipEmptyParts);
+            if (0 < tsl.count())
+            {
+                QString elementType = tsl.at(tsl.count()-1);
+                if (iwbElementImage.contains(elementType))
+                    sRet = tIWBImage;
+                else 
+                if (iwbElementAudio.contains(elementType))
+                    sRet = tIWBAudio;
+                else
+                if (iwbElementVideo.contains(elementType))
+                    sRet = tIWBVideo;   
+            }
+        }
+    }
+    else
+        sRet = element.tagName();
+
+    return sRet;
+}
+
+bool UBCFFAdaptor::UBToCFFConverter::itIsSupportedFormat(QString format)
+{
+    bool bRet;
+
+    QStringList tsl = format.split(".", QString::SkipEmptyParts);
+    if (0 < tsl.count())
+        bRet = cffSupportedFileFormats.contains(tsl.at(tsl.count()-1));       
+    else
+        bRet = false;
+
+    return bRet;
+}
+
+bool UBCFFAdaptor::UBToCFFConverter::itIsSVGAttribute(QString attribute)
+{
+    return svgElementAttributes.contains(attribute);
+}
+
+bool UBCFFAdaptor::UBToCFFConverter::itIsIWBAttribute(QString attribute)
+{
+    return iwbElementAttributes.contains(attribute);
+}
+
+bool UBCFFAdaptor::UBToCFFConverter::itIsUBZAttributeToConvert(QString attribute)
+{
+    return ubzElementAttributesToConvert.contains(attribute);
+}
+
 bool UBCFFAdaptor::UBToCFFConverter::ibwSetElementAsBackground(QDomElement &element)
 {
     QDomElement iwbBackgroundElementPart;
@@ -725,11 +948,168 @@ bool UBCFFAdaptor::UBToCFFConverter::ibwAddLine(int x1, int y1, int x2, int y2, 
     return bRet;
 }
 
-QString UBCFFAdaptor::UBToCFFConverter::convertTransformFromUBZ(QString ubzTransform)
+QTransform UBCFFAdaptor::UBToCFFConverter::getTransformFromUBZ(const QDomElement &ubzElement)
 {
-    QString sRes;
+    QTransform trRet;
+  
+    QStringList transformParameters;
 
-    return sRes;
+    QString ubzTransform = ubzElement.attribute(aTransform);
+    ubzTransform.remove("matrix");
+    ubzTransform.remove("(");
+    ubzTransform.remove(")");
+
+    transformParameters = ubzTransform.split(",", QString::SkipEmptyParts);
+
+    if (6 <= transformParameters.count())
+    {
+        QTransform *tr = NULL;
+        tr = new QTransform(transformParameters.at(0).toDouble(),
+            transformParameters.at(1).toDouble(),
+            transformParameters.at(2).toDouble(),
+            transformParameters.at(3).toDouble(),
+            transformParameters.at(4).toDouble(),
+            transformParameters.at(5).toDouble());
+
+        trRet = *tr;
+        
+        delete tr;
+    }
+
+    if (6 <= transformParameters.count())
+    {
+        QTransform *tr = NULL;
+        tr = new QTransform(transformParameters.at(0).toDouble(),
+            transformParameters.at(1).toDouble(),
+            transformParameters.at(2).toDouble(),
+            transformParameters.at(3).toDouble(),
+            transformParameters.at(4).toDouble(),
+            transformParameters.at(5).toDouble());
+
+        trRet = *tr;
+        
+        delete tr;
+    }
+    return trRet;
+}
+
+void UBCFFAdaptor::UBToCFFConverter::setGeometryFromUBZ(const QDomElement &ubzElement, QDomElement &iwbElement)
+{
+    setCoordinatesFromUBZ(ubzElement,iwbElement);
+
+    QTransform tr = getTransformFromUBZ(ubzElement);
+    double angle = (atan(tr.m21()/tr.m11())*180/PI);
+    if (tr.m21() > 0 && tr.m11() < 0) 
+        angle += 180;
+    else 
+        if (tr.m21() < 0 && tr.m11() < 0) 
+            angle += 180;
+
+    iwbElement.setAttribute(aTransform, QString("rotate(%1)").arg(angle));
+    // "translate" attribute can be added there, but Sankore doesn't use translation in the same sense, so it is not needed to add that attribute now.
+}
+
+void UBCFFAdaptor::UBToCFFConverter::setCoordinatesFromUBZ(const QDomElement &ubzElement, QDomElement &iwbElement)
+{
+    QTransform tr;
+
+    if (QString() != ubzElement.attribute(aTransform))
+        tr = getTransformFromUBZ(ubzElement);
+
+    iwbElement.setAttribute(aX,ubzElement.attribute(aX).toDouble()+tr.m31());
+    iwbElement.setAttribute(aY,ubzElement.attribute(aY).toDouble()+tr.m32());
+    iwbElement.setAttribute(aHeight, ubzElement.attribute(aHeight));
+    iwbElement.setAttribute(aWidth,  ubzElement.attribute(aWidth));
+}
+
+bool UBCFFAdaptor::UBToCFFConverter::setContentFromUBZ(const QDomElement &ubzElement, QDomElement &iwbElement)
+{
+    bool bRet = true;
+   
+    QString srcPath;
+    if (tUBZForeignObject != ubzElement.tagName())
+        srcPath = ubzElement.attribute(aHref);
+    else 
+        srcPath = ubzElement.attribute(aSrc);
+
+    QString sFilename = getFileNameFromPath(srcPath);
+    
+    QString sSrcContentFolder = getSrcContentFolderName(srcPath);
+    QString sSrcFileName(sourcePath + "/" + sSrcContentFolder + "/" + sFilename);
+
+    if (itIsSupportedFormat(sSrcFileName))
+    { 
+
+        QString sDstContentFolder = getDstContentFolderName(ubzElement.tagName());
+        QString sDstFileName(destinationPath+"/"+sDstContentFolder+"/"+sFilename);     
+  
+        QFile srcFile;
+        srcFile.setFileName(sSrcFileName);
+
+        QDir dstDocFolder;
+
+        bRet &= dstDocFolder.setCurrent(destinationPath);
+        if (!dstDocFolder.exists(sDstContentFolder))
+            bRet &= dstDocFolder.mkdir(sDstContentFolder);
+
+        if (bRet)
+            bRet &= srcFile.copy(sDstFileName);
+
+
+        if (bRet)
+            iwbElement.setAttribute(aHref, sDstContentFolder+"/"+sFilename);
+    }
+    else 
+    {
+        qDebug() << "format is not supported by CFF";
+        bRet = false;
+    }
+
+    return bRet;
+}
+
+void UBCFFAdaptor::UBToCFFConverter::setCommonAttributesFromUBZ(const QDomElement &ubzElement, QDomElement &iwbElement,  QDomElement &svgElement)
+{
+    qDebug() << "Parsing Common Attributes";
+
+    for (int i = 0; i < ubzElement.attributes().count(); i++)
+    {
+        QDomNode attribute = ubzElement.attributes().item(i);
+        QString attributeName = attribute.nodeName().remove("ub:");
+        if (itIsSVGAttribute(attributeName))
+        {
+            svgElement.setAttribute(attributeName, attribute.nodeValue());
+        }
+        else
+        if (itIsIWBAttribute(attributeName))
+        {
+            iwbElement.setAttribute(attributeName, attribute.nodeValue());
+        }
+        else
+        if (itIsUBZAttributeToConvert(attributeName))
+        {
+            if (aTransform == attributeName)
+            {
+                setGeometryFromUBZ(ubzElement, svgElement);
+            }
+            else 
+            if (attributeName.contains(aHref)||attributeName.contains(aSrc))
+            {
+                setContentFromUBZ(ubzElement, svgElement);
+            }
+        }
+    }
+
+    if (0 < iwbElement.attributes().count())
+    {
+        QString id = ubzElement.attribute(aUBZUuid);
+        // if element already have an ID, we use it. Else we create new id for element.
+        if (QString() == id)
+            id = QUuid::createUuid().toString();
+
+        svgElement.setAttribute(aID, id);  
+        iwbElement.setAttribute(aHref, id);
+    }
 }
 
 bool UBCFFAdaptor::UBToCFFConverter::createBackground(const QDomElement &element)
@@ -770,18 +1150,17 @@ bool UBCFFAdaptor::UBToCFFConverter::createBackground(const QDomElement &element
         errorStr = "CreatingElementBackgroundParsingError.";
     }
 
-    bool isCrossed = (avTrue == element.attribute(aCrossedBackground));
-    if (isCrossed)
+    if (avTrue == element.attribute(aCrossedBackground))
     {
         QString linesColor = isDark ? "white" : "blue";
-        for (int i = mViewbox.x(); i < mViewbox.x()+mViewbox.width(); i+=iCrossSize)
+        for (int i = bckRect.x(); i < bckRect.x()+bckRect.width(); i+=iCrossSize)
         {
-            bRet = ibwAddLine(i, mViewbox.x(), i, mViewbox.x()+mViewbox.height(), linesColor, iCrossWidth, true);
+            bRet = ibwAddLine(i, bckRect.x(), i, bckRect.x()+bckRect.height(), linesColor, iCrossWidth, true);
         }
 
-        for (int i = mViewbox.y(); i < mViewbox.y()+mViewbox.height(); i+=iCrossSize)
+        for (int i = bckRect.y(); i < bckRect.y()+bckRect.height(); i+=iCrossSize)
         {
-            bRet = ibwAddLine(mViewbox.x(), i, mViewbox.x()+mViewbox.width(), i, linesColor, iCrossWidth, true);
+            bRet = ibwAddLine(bckRect.x(), i, bckRect.x()+bckRect.width(), i, linesColor, iCrossWidth, true);
         }
 
         if (!bRet)
@@ -820,51 +1199,71 @@ bool UBCFFAdaptor::UBToCFFConverter::parseSVGGGroup(const QDomElement &element)
 }
 bool UBCFFAdaptor::UBToCFFConverter::parseUBZImage(const QDomElement &element)
 {
-    Q_UNUSED(element)
-
-//     QDomElement iwbElementPart
-    
-    QString ubzTransform = element.attribute(aTransform);
-
-    QString transform = convertTransformFromUBZ(ubzTransform);
-
     qDebug() << "|parsing image";
-    if (false) {
+
+    bool bRes = true;
+
+    QDomDocument doc;
+
+    QDomElement svgElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + getElementTypeFromUBZ(element));
+    QDomElement iwbElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + tElement);
+
+    setCommonAttributesFromUBZ(element, iwbElementPart, svgElementPart);
+    bRes &= addElementToResultModel(svgElementPart);    
+    bRes &= addElementToResultModel(iwbElementPart);
+      
+    if (!bRes) 
+    {
         qDebug() << "|error at image parsing";
         errorStr = "ImageParsingError";
-        return false;
     }
-    return true;
+    return bRes;
 }
 bool UBCFFAdaptor::UBToCFFConverter::parseUBZVideo(const QDomElement &element)
 {
-    Q_UNUSED(element)
     qDebug() << "|parsing video";
 
-    mIWBContentWriter->writeStartElement(svgIWBNS, tIWBVideo);
-    if (false) {
+    bool bRes = true;
+
+    QDomDocument doc;
+
+    QDomElement svgElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + getElementTypeFromUBZ(element));
+    QDomElement iwbElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + tElement);
+
+    setCommonAttributesFromUBZ(element, iwbElementPart, svgElementPart);   
+    bRes &= addElementToResultModel(svgElementPart);    
+    bRes &= addElementToResultModel(iwbElementPart);  
+
+    if (!bRes) 
+    {
         qDebug() << "|error at video parsing";
         errorStr = "VideoParsingError";
-        return false;
     }
-    mIWBContentWriter->writeEndElement();
 
-    return true;
+    return bRes;
 }
 bool UBCFFAdaptor::UBToCFFConverter::parseUBZAudio(const QDomElement &element)
 {
-    Q_UNUSED(element)
     qDebug() << "|parsing audio";
 
-    mIWBContentWriter->writeStartElement(svgIWBNS, tIWBAudio);
-    if (false) {
+    bool bRes = true;
+
+    QDomDocument doc;
+
+    QDomElement svgElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + getElementTypeFromUBZ(element));
+    QDomElement iwbElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + tElement);
+
+    setCommonAttributesFromUBZ(element, iwbElementPart, svgElementPart);
+    bRes &= addElementToResultModel(svgElementPart);    
+    bRes &= addElementToResultModel(iwbElementPart);
+    
+    if (!bRes) 
+    {
         qDebug() << "|error at audio parsing";
         errorStr = "AudioParsingError";
-        return false;
     }
-    mIWBContentWriter->writeEndElement();
 
-    return true;
+    return bRes;
 }
 bool UBCFFAdaptor::UBToCFFConverter::parseForeignObject(const QDomElement &element)
 {
@@ -876,60 +1275,102 @@ bool UBCFFAdaptor::UBToCFFConverter::parseForeignObject(const QDomElement &eleme
        }
     }
 
-    mIWBContentWriter->writeStartElement(svgIWBNS, tIWBImage);
-
     qDebug() << "|parsing foreign object";
-    if (false) {
+
+    bool bRes = true;
+
+    QDomDocument doc;
+
+    QDomElement svgElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + getElementTypeFromUBZ(element));
+    QDomElement iwbElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + tElement);
+
+    setCommonAttributesFromUBZ(element, iwbElementPart, svgElementPart);
+    bRes &= addElementToResultModel(svgElementPart);    
+    bRes &= addElementToResultModel(iwbElementPart);
+
+    if (!bRes) 
+    {
         qDebug() << "|error at parsing foreign object";
         errorStr = "ForeignObjectParsingError";
-        return false;
     }
-    mIWBContentWriter->writeEndElement();
 
-    return true;
+    return bRes;
 }
 
 bool UBCFFAdaptor::UBToCFFConverter::parseUBZText(const QDomElement &element)
 {
-    Q_UNUSED(element)
     qDebug() << "|parsing text";
 
-    mIWBContentWriter->writeStartElement(svgIWBNS, tIWBText);
-    if (false) {
+    bool bRes = true;
+
+    QDomDocument doc;
+
+    QDomElement svgElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + getElementTypeFromUBZ(element));
+    QDomElement iwbElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + tElement);
+
+    setCommonAttributesFromUBZ(element, iwbElementPart, svgElementPart);
+    bRes &= addElementToResultModel(svgElementPart);    
+    bRes &= addElementToResultModel(iwbElementPart);
+
+    if (!bRes)
+    {
         qDebug() << "|error at text parsing";
         errorStr = "TextParsingError";
-        return false;
     }
-    mIWBContentWriter->writeEndElement();
 
-    return true;
+    return bRes;
 }
 
 bool UBCFFAdaptor::UBToCFFConverter::parseUBZPolygon(const QDomElement &element)
 {
-    Q_UNUSED(element)
     qDebug() << "||parsing polygon";
-    if (false) {
+
+    bool bRes = true;
+
+    QDomDocument doc;
+
+    QDomElement svgElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + getElementTypeFromUBZ(element));
+    QDomElement iwbElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + tElement);
+
+    setCommonAttributesFromUBZ(element, iwbElementPart, svgElementPart);
+    QString id = QUuid::createUuid().toString();
+    svgElementPart.setAttribute(aID, id);
+    if (0 < iwbElementPart.attributes().count())
+        svgElementPart.setAttribute(aHref, id);
+
+    bRes &= addElementToResultModel(svgElementPart);    
+    bRes &= addElementToResultModel(iwbElementPart);
+
+    if (!bRes)
+    {
         qDebug() << "||error at parsing polygon";
         errorStr = "PolygonParsingError";
-        return false;
     }
-    return true;
+    return bRes;
 }
 
 
 
 bool UBCFFAdaptor::UBToCFFConverter::parseUBZPolyline(const QDomElement &element)
 {
+    qDebug() << "||parsing polyline";
     bool bRes = true;
 
-    QDomElement svgElementPart = element;
-    
-        
+    QDomDocument doc;
 
-    bRes = addElementToResultModel(svgElementPart);
+    QDomElement svgElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + getElementTypeFromUBZ(element));
+    QDomElement iwbElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + tElement);
 
-    qDebug() << "||parsing polyline";
+    setCommonAttributesFromUBZ(element, iwbElementPart, svgElementPart);
+
+    QString id = QUuid::createUuid().toString();
+    svgElementPart.setAttribute(aID, id);
+    if (0 < iwbElementPart.attributes().count())
+        svgElementPart.setAttribute(aHref, id);
+
+    bRes &= addElementToResultModel(svgElementPart);    
+    bRes &= addElementToResultModel(iwbElementPart);
+
     if (!bRes) {
         qDebug() << "||error at parsing polygon";
         errorStr = "PolylineParsingError";
@@ -937,11 +1378,28 @@ bool UBCFFAdaptor::UBToCFFConverter::parseUBZPolyline(const QDomElement &element
     return bRes;
 }
 
-bool UBCFFAdaptor::UBToCFFConverter::parseUBZLine(const QDomElement &element){
-    Q_UNUSED(element)
-
+bool UBCFFAdaptor::UBToCFFConverter::parseUBZLine(const QDomElement &element)
+{   
     qDebug() << "||parsing line";
-    if (false) {
+    bool bRes = true;
+
+    QDomDocument doc;
+
+    QDomElement svgElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + getElementTypeFromUBZ(element));
+    QDomElement iwbElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + tElement);
+
+    setCommonAttributesFromUBZ(element, iwbElementPart, svgElementPart);
+
+    QString id = QUuid::createUuid().toString();
+    svgElementPart.setAttribute(aID, id);
+    if (0 < iwbElementPart.attributes().count())
+        svgElementPart.setAttribute(aHref, id);
+
+    bRes &= addElementToResultModel(svgElementPart);    
+    bRes &= addElementToResultModel(iwbElementPart);
+
+    if (!bRes) 
+    {
         qDebug() << "||error at parsing polygon";
         errorStr = "LineParsingError";
         return false;
