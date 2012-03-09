@@ -5,6 +5,7 @@
 
 #include <QtCore>
 
+class QTransform;
 class QDomDocument;
 class QDomElement;
 class QuaZipFile;
@@ -82,11 +83,26 @@ private:
         bool parseUBZLine(const QDomElement &element);
         bool addElementToResultModel(QDomElement &element){return true;}
 
+        QString getDstContentFolderName(QString elementType);
+        QString getSrcContentFolderName(QString href);
+        QString getFileNameFromPath(QString sPath);
+        QString getElementTypeFromUBZ(const QDomElement &element);
+
+        bool itIsSupportedFormat(QString format);
+        bool itIsSVGAttribute(QString attribute);
+        bool itIsIWBAttribute(QString attribute);
+        bool itIsUBZAttributeToConvert(QString attribute);
+
         bool ibwSetElementAsBackground(QDomElement &element);
 
         bool ibwAddLine(int x1, int y1, int x2, int y2, QString color=QString(), int width=1, bool isBackground=false);
 
-        QString convertTransformFromUBZ(QString ubzTransform);
+        QTransform getTransformFromUBZ(const QDomElement &ubzElement);
+        void setGeometryFromUBZ(const QDomElement &ubzElement, QDomElement &iwbElement);
+        void setCoordinatesFromUBZ(const QDomElement &ubzElement, QDomElement &iwbElement);
+        bool setContentFromUBZ(const QDomElement &ubzElement, QDomElement &iwbElement);
+
+        void setCommonAttributesFromUBZ(const QDomElement &ubzElement, QDomElement &iwbElement,  QDomElement &svgElement);
 
         inline QRect getViewboxRect(const QString &element) const;
         inline QString rectToIWBAttr(const QRect &rect) const;
