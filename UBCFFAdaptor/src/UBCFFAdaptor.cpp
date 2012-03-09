@@ -420,7 +420,6 @@ UBCFFAdaptor::UBToCFFConverter::UBToCFFConverter(const QString &source, const QS
 
     errorStr = noErrorMsg;
     mDataModel = new QDomDocument;
-    mResultDataModel = new QDomDocument;
 
     mIWBContentWriter = new QXmlStreamWriter;
     mIWBContentWriter->setAutoFormatting(true);
@@ -435,37 +434,39 @@ bool UBCFFAdaptor::UBToCFFConverter::parse()
 
     qDebug() << "begin parsing ubz";
 
-    if (!createXMLOutputPattern()) {
-        if (errorStr == noErrorMsg)
-            errorStr = "createXMLOutputPatternError";
+    QFile outFile(contentIWBFileName());
+    if (!outFile.open(QIODevice::WriteOnly| QIODevice::Text)) {
+        qDebug() << "can't open output file for writing";
+        errorStr = "createXMLOutputPatternError";
         return false;
     }
 
-    QFile QDomModelFile(contentIWBFileName());
-    if (!QDomModelFile.open(QIODevice::ReadWrite | QIODevice::Text)) {
-        qDebug() << "can't open pattern file for writing ";
-        errorStr = "OpenPatternFileError";
-        return false;
-    }
+    mIWBContentWriter->setDevice(&outFile);
 
-    int errorLine, errorColumn;
-    if (!mResultDataModel->setContent(&QDomModelFile, true, &errorStr, &errorLine, &errorColumn)) {
-            qWarning() << "Error:Parseerroratline" << errorLine << ","
-                           << "column" << errorColumn << ":" << errorStr;
-            return false;
-    }
+    mIWBContentWriter->writeStartDocument();
+    mIWBContentWriter->writeStartElement(tIWBRoot);
+
+    fillNamespaces();
 
     if (!parseMetadata()) {
         if (errorStr == noErrorMsg)
             errorStr = "MetadataParsingError";
+
+        outFile.close();
         return false;
     }
 
     if (!parseContent()) {
         if (errorStr == noErrorMsg)
             errorStr = "ContentParsingError";
+        outFile.close();
         return false;
     }
+
+    mIWBContentWriter->writeEndElement();
+    mIWBContentWriter->writeEndDocument();
+
+    outFile.close();
 
     qDebug() << "finished with success";
 
@@ -487,6 +488,7 @@ bool UBCFFAdaptor::UBToCFFConverter::createXMLOutputPattern()
     fillNamespaces();
 
     mIWBContentWriter->writeEndElement();
+
     mIWBContentWriter->writeEndDocument();
 
     outFile.close();
@@ -510,11 +512,6 @@ bool UBCFFAdaptor::UBToCFFConverter::parseMetadata()
     }
 
     QDomElement nextInElement = mDataModel->documentElement();
-    QDomElement parentOutElement = mResultDataModel->documentElement().firstChildElement();
-    if (parentOutElement.isNull()) {
-        qDebug() << "The content.xml result document patern is invalid";
-//        return false;
-    }
 
     nextInElement = nextInElement.firstChildElement(tDescription);
     if (!nextInElement.isNull()) {
@@ -528,7 +525,7 @@ bool UBCFFAdaptor::UBToCFFConverter::parseMetadata()
 
             QString textContent = nextInElement.text();
             if (!textContent.trimmed().isEmpty()) {
-                if (nextInElement.tagName() == tUBZSize) { //getting main viewbox rect since for CFF specificaton we have static viewbox
+                if (nextInElement.tagName() == tUBZSize) { //taking main viewbox rect since for CFF specificaton we have static viewbox
                     QRect tmpRect = getViewboxRect(nextInElement.text());
                     if (!tmpRect.isNull()) {
                         mViewbox = tmpRect;
@@ -985,7 +982,8 @@ QString UBCFFAdaptor::UBToCFFConverter::digitFileFormat(int digit) const
 {
     return QString("%1").arg(digit, 3, 10, QLatin1Char('0'));
 }
-QString UBCFFAdaptor::UBToCFFConverter::contentIWBFileName() const{
+QString UBCFFAdaptor::UBToCFFConverter::contentIWBFileName() const
+{
     return destinationPath + "/" + fIWBContent;
 }
 
@@ -1038,6 +1036,11 @@ QString UBCFFAdaptor::UBToCFFConverter::rectToIWBAttr(const QRect &rect) const
                                  .arg(rect.topLeft().y())
                                  .arg(rect.width())
                                  .arg(rect.height());
+}
+
+UBCFFAdaptor::UBCFFDataExporter::UBCFFDataExporter()
+{
+
 }
 
 UBCFFAdaptor::UBToUBZConverter::UBToUBZConverter()

@@ -33,6 +33,20 @@ private:
     QStringList tmpDirs;
 
 private:
+
+    class UBCFFDataExporter {
+    public:
+        UBCFFDataExporter();
+
+        bool saveIWBMetadataFromFile(const QString &filename);
+        bool addSvg(const QDomElement element);
+        QMap<int, QDomElement> mSvgElements;
+    private:
+
+
+    };
+
+
     class UBToCFFConverter {
 
     public:
@@ -82,11 +96,11 @@ private:
 
     private:
         QDomDocument *mDataModel; //model for reading indata
-        QDomDocument *mResultDataModel; //result DOM for saving
         QXmlStreamWriter *mIWBContentWriter; //stream to write outdata
         QRect mViewbox; //Main viewbox parameter for CFF
         QString sourcePath; // dir with unpacked source data (ubz)
         QString destinationPath; //dir with unpacked destination data (iwb)
+        UBCFFDataExporter mExporterModel; //QDomElement CFF data handler
         mutable QString errorStr; // last error string message
 
     public:
