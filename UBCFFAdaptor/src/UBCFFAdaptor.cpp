@@ -1497,11 +1497,6 @@ QString UBCFFAdaptor::UBToCFFConverter::rectToIWBAttr(const QRect &rect) const
                                  .arg(rect.height());
 }
 
-//UBCFFAdaptor::UBCFFDataExporter::UBCFFDataExporter()
-//{
-
-//}
-
 UBCFFAdaptor::UBToUBZConverter::UBToUBZConverter()
 {
 

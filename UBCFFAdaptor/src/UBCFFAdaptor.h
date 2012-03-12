@@ -103,7 +103,6 @@ private:
         QRect mViewbox; //Main viewbox parameter for CFF
         QString sourcePath; // dir with unpacked source data (ubz)
         QString destinationPath; //dir with unpacked destination data (iwb)
-//        UBCFFDataExporter mExporterModel; //QDomElement CFF data handler
         QMap<int, QDomElement> mSvgElements; //Saving svg elements to have a sorted by z order list of elements to write;
         QList<QDomElement> mExtendedElements; //Saving extended options of elements to be able to add them to the end of result iwb document;
 
