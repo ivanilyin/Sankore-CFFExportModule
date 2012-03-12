@@ -43,6 +43,7 @@ const QString tUBZAudio = "audio";
 const QString tUBZVideo = "video";
 const QString tUBZImage = "image";
 const QString tUBZForeignObject = "foreignObject";
+const QString tUBZTextContent = "itemTextContent";
 
 const QString tIWBImage = "image";
 const QString tIWBVideo = "video";
@@ -841,7 +842,12 @@ QString UBCFFAdaptor::UBToCFFConverter::getElementTypeFromUBZ(const QDomElement 
     {
         QString sPath;
         if (element.hasAttribute(aUBZType))
-            sRet= element.attribute(aUBZType);
+        {
+            if ("text" == element.attribute(aUBZType))
+                sRet = "textarea";
+            else
+                sRet = element.attribute(aUBZType);
+        }
         else
         {      
             if (element.hasAttribute(aSrc))
@@ -1044,9 +1050,8 @@ bool UBCFFAdaptor::UBToCFFConverter::setContentFromUBZ(const QDomElement &ubzEle
         QFile srcFile;
         srcFile.setFileName(sSrcFileName);
 
-        QDir dstDocFolder;
-
-        bRet &= dstDocFolder.setCurrent(destinationPath);
+        QDir dstDocFolder(destinationPath);
+        
         if (!dstDocFolder.exists(sDstContentFolder))
             bRet &= dstDocFolder.mkdir(sDstContentFolder);
 
@@ -1066,40 +1071,104 @@ bool UBCFFAdaptor::UBToCFFConverter::setContentFromUBZ(const QDomElement &ubzEle
     return bRet;
 }
 
-void UBCFFAdaptor::UBToCFFConverter::setCommonAttributesFromUBZ(const QDomElement &ubzElement, QDomElement &iwbElement,  QDomElement &svgElement)
+QString UBCFFAdaptor::UBToCFFConverter::getCFFTextFromHTMLTextNode(const QDomElement htmlTextNode)
 {
-    qDebug() << "Parsing Common Attributes";
+    QDomDocument doc;
+    
 
-    for (int i = 0; i < ubzElement.attributes().count(); i++)
+    QDomNode spanNode = htmlTextNode.firstChild().firstChild();
+    
+    QString textString;
+    while (!spanNode.isNull())
     {
-        QDomNode attribute = ubzElement.attributes().item(i);
-        QString attributeName = attribute.nodeName().remove("ub:");
-        if (itIsSVGAttribute(attributeName))
-        {
-            svgElement.setAttribute(attributeName, attribute.nodeValue());
-        }
+        if (htmlTextNode.isText())
+            textString += htmlTextNode.nodeValue();
         else
-        if (itIsIWBAttribute(attributeName))
-        {
-            iwbElement.setAttribute(attributeName, attribute.nodeValue());
+        if (htmlTextNode.hasAttributes())
+        {       
+            QString newAttr;
+            QString newVal;
+            int attrCount = spanNode.attributes().count();
+            if (0 < attrCount)
+            {
+                textString += "<svg:tspan";
+                for (int i = 0; i < attrCount; i++)
+                {
+                    QStringList cffAttributes = spanNode.attributes().item(i).nodeValue().split(";", QString::SkipEmptyParts);
+                    {
+                        for (int i = 0; i < cffAttributes.count(); i++)
+                        {                       
+                            QString attr = cffAttributes.at(i).trimmed();
+                            QStringList AttrVal = attr.split(":", QString::SkipEmptyParts);
+                            if(1 < AttrVal.count())
+                            {
+                                newAttr = ubzAttrNamtToCFFAttrName(AttrVal.at(0));
+                                newVal  = "\"" + AttrVal.at(1) + "\"";
+                                textString += " " + newAttr + "=" + newVal;
+                            }
+                        }
+                    }
+
+
+                }
+                textString += ">";
+             
+                QDomElement el = doc.createElementNS(svgIWBNS, svgIWBNSPrefix+"tspan");
+//                el.setTagName()
+                QDomText node = doc.createTextNode(spanNode.firstChild().nodeValue());
+                
+
+
+                textString += spanNode.firstChild().nodeValue();
+
+                textString += "</svg:tspan>";
+            }
         }
-        else
-        if (itIsUBZAttributeToConvert(attributeName))
+
+
+        spanNode = spanNode.nextSibling();
+    }
+
+    return textString;
+}
+
+QString UBCFFAdaptor::UBToCFFConverter::ubzAttrNamtToCFFAttrName(QString cffAttrName)
+{
+    QString sRet = cffAttrName;
+    if (QString("color") == cffAttrName)
+        sRet = QString("fill");
+
+    return sRet;
+}
+
+void UBCFFAdaptor::UBToCFFConverter::setCFFAttribute(const QString &attributeName, const QString &attributeValue, const QDomElement &ubzElement, QDomElement &iwbElement,  QDomElement &svgElement)
+{  
+    if (itIsSVGAttribute(attributeName))
+    {
+        svgElement.setAttribute(attributeName,  attributeValue);
+    }
+    else
+    if (itIsIWBAttribute(attributeName))
+    {
+        iwbElement.setAttribute(attributeName, attributeValue);
+    }
+    else
+    if (itIsUBZAttributeToConvert(attributeName))
+    {
+        if (aTransform == attributeName)
         {
-            if (aTransform == attributeName)
-            {
-                setGeometryFromUBZ(ubzElement, svgElement);
-            }
-            else 
-            if (attributeName.contains(aHref)||attributeName.contains(aSrc))
-            {
-                setContentFromUBZ(ubzElement, svgElement);
-            }
+            setGeometryFromUBZ(ubzElement, svgElement);
+        }
+        else 
+        if (attributeName.contains(aHref)||attributeName.contains(aSrc))
+        {
+            setContentFromUBZ(ubzElement, svgElement);
         }
     }
 
     if (0 < iwbElement.attributes().count())
     {
+
         QString id = ubzElement.attribute(aUBZUuid);
         // if element already have an ID, we use it. Else we create new id for element.
         if (QString() == id)
@@ -1108,6 +1177,82 @@ void UBCFFAdaptor::UBToCFFConverter::setCommonAttributesFromUBZ(const QDomElemen
         svgElement.setAttribute(aID, id);  
         iwbElement.setAttribute(aHref, id);
     }
+}
+
+void UBCFFAdaptor::UBToCFFConverter::setCommonAttributesFromUBZ(const QDomElement &ubzElement, QDomElement &iwbElement,  QDomElement &svgElement)
+{
+    qDebug() << "Parsing Common Attributes";
+
+    for (int i = 0; i < ubzElement.attributes().count(); i++)
+    {
+        QDomNode attribute = ubzElement.attributes().item(i);
+        QString attributeName = attribute.nodeName().remove("ub:");
+
+        setCFFAttribute(attributeName, attribute.nodeValue(), ubzElement, iwbElement, svgElement);
+    }
+}
+
+QDomNode UBCFFAdaptor::UBToCFFConverter::findTextNode(const QDomNode &node)
+{
+    QDomNode iterNode = node;
+
+    while (!iterNode.isNull())
+    {       
+        if (iterNode.isText())
+        {   
+            if (!iterNode.isNull())              
+                return iterNode;
+        }
+        else 
+        {
+            if (!iterNode.firstChild().isNull())
+            {   
+                QDomNode foundNode = findTextNode(iterNode.firstChild());
+                if (!foundNode.isNull())
+                    if (foundNode.isText())
+                        return foundNode;
+            }
+        }
+        if (!iterNode.nextSibling().isNull())
+            iterNode = iterNode.nextSibling();
+        else 
+            break;
+    }
+    return iterNode;
+}
+
+QDomNode UBCFFAdaptor::UBToCFFConverter::findNodeByTagName(const QDomNode &node, QString tagName)
+{
+    QDomNode iterNode = node;
+
+    while (!iterNode.isNull())
+    {       
+        QString t = iterNode.toElement().tagName();
+        if (tagName == t)
+            return iterNode;
+        else 
+        {
+            if (!iterNode.firstChildElement().isNull())
+            {
+                QDomNode foundNode = findNodeByTagName(iterNode.firstChildElement(), tagName);
+                if (!foundNode.isNull())
+                    if (foundNode.isElement())
+                    {
+                        if (tagName == foundNode.toElement().tagName())
+                            return foundNode;
+                    }
+                    else
+                        break;
+            }
+        }
+        
+        if (!iterNode.nextSibling().isNull())
+            iterNode = iterNode.nextSibling();
+        else 
+            break;
+    }
+    return QDomNode();
+
 }
 
 bool UBCFFAdaptor::UBToCFFConverter::createBackground(const QDomElement &element)
@@ -1305,8 +1450,64 @@ bool UBCFFAdaptor::UBToCFFConverter::parseUBZText(const QDomElement &element)
 
     QDomElement svgElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + getElementTypeFromUBZ(element));
     QDomElement iwbElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + tElement);
-
+    
     setCommonAttributesFromUBZ(element, iwbElementPart, svgElementPart);
+
+    if (element.hasChildNodes())
+    {
+        QDomDocument htmlDoc;
+        htmlDoc.setContent(findTextNode(element).nodeValue());
+
+        QDomNode bodyNode = findNodeByTagName(htmlDoc.firstChildElement(), "body");
+
+        QString commonParams;
+
+        for (int i = 0; i < bodyNode.attributes().count(); i++)
+        {
+            commonParams += " " + bodyNode.attributes().item(i).nodeValue();
+        }
+        qDebug() << "common parameters: " + commonParams;
+
+        commonParams.remove(" ");
+        commonParams.remove("'");
+
+        QStringList commonAttributes = commonParams.split(";", QString::SkipEmptyParts);
+        for (int i = 0; i < commonAttributes.count(); i++)
+        {
+            QStringList AttrVal = commonAttributes.at(i).split(":", QString::SkipEmptyParts);
+            if (1 < AttrVal.count())
+            {                
+                QString sAttr = AttrVal.at(0);
+                QString sVal  = AttrVal.at(1);
+
+                setCFFAttribute(sAttr, sVal, element, iwbElementPart, svgElementPart);
+            }
+ 
+        }
+
+        QString cffText = getCFFTextFromHTMLTextNode(bodyNode.toElement());
+
+        QDomDocument textDoc;
+        bool b = textDoc.setContent("<content>"+ cffText+ "</content>", true);
+
+        qDebug() << textDoc.toString();
+        
+        QDomNode nextNode = textDoc.firstChild().firstChild();
+        
+        while (!nextNode.isNull())
+        {
+            qDebug() << nextNode.toElement().text();
+            svgElementPart.appendChild(nextNode.cloneNode(true));        
+            nextNode = nextNode.nextSibling();
+        }
+    }
+    
+    doc.appendChild(svgElementPart);
+    doc.appendChild(iwbElementPart);
+
+    QString s = doc.toString();
+    qDebug() << s;
+
     bRes &= addElementToResultModel(svgElementPart);    
     bRes &= addElementToResultModel(iwbElementPart);
 
@@ -1402,7 +1603,7 @@ bool UBCFFAdaptor::UBToCFFConverter::parseUBZLine(const QDomElement &element)
         errorStr = "LineParsingError";
         return false;
     }
-    return true;
+    return bRes;
 }
 
 

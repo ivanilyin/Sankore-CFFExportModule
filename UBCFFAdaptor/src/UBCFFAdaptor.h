@@ -8,6 +8,7 @@
 class QTransform;
 class QDomDocument;
 class QDomElement;
+class QDomNode;
 class QuaZipFile;
 
 class UBCFFADAPTORSHARED_EXPORT UBCFFAdaptor {
@@ -88,8 +89,15 @@ private:
         void setGeometryFromUBZ(const QDomElement &ubzElement, QDomElement &iwbElement);
         void setCoordinatesFromUBZ(const QDomElement &ubzElement, QDomElement &iwbElement);
         bool setContentFromUBZ(const QDomElement &ubzElement, QDomElement &iwbElement);
+        void setCFFTextFromUBZ(const QDomElement &ubzElement, QDomElement &iwbElement, QDomElement &svgElement);
+        QString getCFFTextFromHTMLTextNode(const QDomElement htmlTextNode);
+        QString ubzAttrNamtToCFFAttrName(QString cffAttrName);
 
+        void setCFFAttribute(const QString &attributeName, const QString &attributeValue, const QDomElement &ubzElement, QDomElement &iwbElement,  QDomElement &svgElement);
         void setCommonAttributesFromUBZ(const QDomElement &ubzElement, QDomElement &iwbElement,  QDomElement &svgElement);
+
+        QDomNode findTextNode(const QDomNode &node);
+        QDomNode findNodeByTagName(const QDomNode &node, QString tagName);
 
         inline QRect getViewboxRect(const QString &element) const;
         inline QString rectToIWBAttr(const QRect &rect) const;
