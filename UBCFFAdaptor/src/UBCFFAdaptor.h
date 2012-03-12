@@ -35,19 +35,6 @@ private:
 
 private:
 
-    class UBCFFDataExporter {
-    public:
-        UBCFFDataExporter();
-
-        bool saveIWBMetadataFromFile(const QString &filename);
-        bool addSvg(const QDomElement element);
-        QMap<int, QDomElement> mSvgElements;
-    private:
-
-
-    };
-
-
     class UBToCFFConverter {
 
     public:
@@ -88,10 +75,10 @@ private:
         QString getFileNameFromPath(QString sPath);
         QString getElementTypeFromUBZ(const QDomElement &element);
 
-        bool itIsSupportedFormat(QString format);
-        bool itIsSVGAttribute(QString attribute);
-        bool itIsIWBAttribute(QString attribute);
-        bool itIsUBZAttributeToConvert(QString attribute);
+        bool itIsSupportedFormat(const QString &format) const;
+        bool itIsSVGAttribute(const QString &attribute) const;
+        bool itIsIWBAttribute(const QString &attribute) const;
+        bool itIsUBZAttributeToConvert(const QString &attribute) const;
 
         bool ibwSetElementAsBackground(QDomElement &element);
 
@@ -116,7 +103,10 @@ private:
         QRect mViewbox; //Main viewbox parameter for CFF
         QString sourcePath; // dir with unpacked source data (ubz)
         QString destinationPath; //dir with unpacked destination data (iwb)
-        UBCFFDataExporter mExporterModel; //QDomElement CFF data handler
+//        UBCFFDataExporter mExporterModel; //QDomElement CFF data handler
+        QMap<int, QDomElement> mSvgElements; //Saving svg elements to have a sorted by z order list of elements to write;
+        QList<QDomElement> mExtendedElements; //Saving extended options of elements to be able to add them to the end of result iwb document;
+
         mutable QString errorStr; // last error string message
 
     public:

@@ -109,7 +109,7 @@ const QString pageFileExtentionUBZ = "svg";
 const int iCrossSize = 32;
 const int iCrossWidth = 5;
 
-// Image formats supported by CFF exclude wgt. Wgt is widget from sankore, who places as it png preview.
+// Image formats supported by CFF exclude wgt. Wgt is Sankore widget, which is considered as a .png preview.
 const QString iwbElementImage(" \
 wgt \
 jpeg \
@@ -235,7 +235,8 @@ bool UBCFFAdaptor::convertUBZToIWB(const QString &from, const QString &to)
         return false;
     }
 
-    compressZip(tmpDestination, to);
+    if (!compressZip(tmpDestination, to))
+        qDebug() << "error in compression";
 
     //Cleanning tmp souces in filesystem
     if (!freeDir(source))
@@ -870,7 +871,7 @@ QString UBCFFAdaptor::UBToCFFConverter::getElementTypeFromUBZ(const QDomElement 
     return sRet;
 }
 
-bool UBCFFAdaptor::UBToCFFConverter::itIsSupportedFormat(QString format)
+bool UBCFFAdaptor::UBToCFFConverter::itIsSupportedFormat(const QString &format) const
 {
     bool bRet;
 
@@ -883,17 +884,17 @@ bool UBCFFAdaptor::UBToCFFConverter::itIsSupportedFormat(QString format)
     return bRet;
 }
 
-bool UBCFFAdaptor::UBToCFFConverter::itIsSVGAttribute(QString attribute)
+bool UBCFFAdaptor::UBToCFFConverter::itIsSVGAttribute(const QString &attribute) const
 {
     return svgElementAttributes.contains(attribute);
 }
 
-bool UBCFFAdaptor::UBToCFFConverter::itIsIWBAttribute(QString attribute)
+bool UBCFFAdaptor::UBToCFFConverter::itIsIWBAttribute(const QString &attribute) const
 {
     return iwbElementAttributes.contains(attribute);
 }
 
-bool UBCFFAdaptor::UBToCFFConverter::itIsUBZAttributeToConvert(QString attribute)
+bool UBCFFAdaptor::UBToCFFConverter::itIsUBZAttributeToConvert(const QString &attribute) const
 {
     return ubzElementAttributesToConvert.contains(attribute);
 }
@@ -1496,10 +1497,10 @@ QString UBCFFAdaptor::UBToCFFConverter::rectToIWBAttr(const QRect &rect) const
                                  .arg(rect.height());
 }
 
-UBCFFAdaptor::UBCFFDataExporter::UBCFFDataExporter()
-{
+//UBCFFAdaptor::UBCFFDataExporter::UBCFFDataExporter()
+//{
 
-}
+//}
 
 UBCFFAdaptor::UBToUBZConverter::UBToUBZConverter()
 {
