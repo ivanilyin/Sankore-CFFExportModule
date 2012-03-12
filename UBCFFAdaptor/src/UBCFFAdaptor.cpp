@@ -1052,9 +1052,8 @@ bool UBCFFAdaptor::UBToCFFConverter::setContentFromUBZ(const QDomElement &ubzEle
         QFile srcFile;
         srcFile.setFileName(sSrcFileName);
 
-        QDir dstDocFolder;
-
-        bRet &= dstDocFolder.setCurrent(destinationPath);
+        QDir dstDocFolder(destinationPath);
+        
         if (!dstDocFolder.exists(sDstContentFolder))
             bRet &= dstDocFolder.mkdir(sDstContentFolder);
 
@@ -1606,7 +1605,7 @@ bool UBCFFAdaptor::UBToCFFConverter::parseUBZLine(const QDomElement &element)
         errorStr = "LineParsingError";
         return false;
     }
-    return true;
+    return bRes;
 }
 
 
