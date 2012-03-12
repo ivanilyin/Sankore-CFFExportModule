@@ -10,7 +10,7 @@ int main(int argc, char *argv[])
     QCoreApplication a(argc, argv);
 
     UBCFFAdaptor testAdaptor;
-    testAdaptor.convertUBZToIWB("../resources/suse.ubz", "../resources/newDir/lkjasdfkljasldfjl.iwb");
+    testAdaptor.convertUBZToIWB("../resources/suse.ubz", "../resources/newDir/destiantion.iwb");
 
     qDebug() << "closing an application";
     

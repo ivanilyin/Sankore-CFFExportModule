@@ -55,6 +55,8 @@ private:
         bool parsePageset(const QStringList &pageFileNames);
         bool parsePage(const QString &pageFileName);
         bool parseSvgPageSection(const QDomElement &element);
+        bool writeSVGIwbSection();
+        bool writeExtendedIwbSection();
         bool parseGroupPageSection(const QDomElement &element);
 
         bool createBackground(const QDomElement &element);
@@ -111,7 +113,7 @@ private:
         QRect mViewbox; //Main viewbox parameter for CFF
         QString sourcePath; // dir with unpacked source data (ubz)
         QString destinationPath; //dir with unpacked destination data (iwb)
-        QMap<int, QDomElement> mSvgElements; //Saving svg elements to have a sorted by z order list of elements to write;
+        QMultiMap<int, QDomElement> mSvgElements; //Saving svg elements to have a sorted by z order list of elements to write;
         QList<QDomElement> mExtendedElements; //Saving extended options of elements to be able to add them to the end of result iwb document;
 
         mutable QString errorStr; // last error string message

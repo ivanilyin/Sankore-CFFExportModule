@@ -664,7 +664,26 @@ bool UBCFFAdaptor::UBToCFFConverter::parseContent() {
         return false;
     }
 
+    mIWBContentWriter->writeStartElement(svgIWBNS, tSvg);
+
+    if (!mViewbox.isNull()) { //If viewbox has been set
+        mIWBContentWriter->writeAttribute(aIWBViewBox, rectToIWBAttr(mViewbox));
+    }
+
+    if (!writeSVGIwbSection()) {
+        if (errorStr == noErrorMsg)
+            errorStr = "writeSVGIwbSectionError";
+        return false;
+    }
+
     mIWBContentWriter->writeEndElement();
+
+    if (writeExtendedIwbSection()) {
+        if (errorStr == noErrorMsg)
+            errorStr = "writeExtendedIwbSectionError";
+        return false;
+    }
+
     return true;
 }
 
@@ -755,6 +774,38 @@ bool UBCFFAdaptor::UBToCFFConverter::parseSvgPageSection(const QDomElement &elem
 
     return true;
 }
+bool UBCFFAdaptor::UBToCFFConverter::writeSVGIwbSection()
+{
+    if (!mSvgElements.count()) {
+        qDebug() << "svg content list is empty";
+        errorStr = "EmptySvgSectionContentError";
+        return false;
+    }
+    QMapIterator<int, QDomElement> nextSVGElement(mSvgElements);
+    while (nextSVGElement.hasNext()) {
+        QDomElement curSVGElement = nextSVGElement.next().value();
+        //TODO write svg element to mIWBContentWriter
+    }
+
+    return true;
+}
+
+bool UBCFFAdaptor::UBToCFFConverter::writeExtendedIwbSection()
+{
+    if (!mExtendedElements.count()) {
+        qDebug() << "extended iwb content list is empty";
+        errorStr = "EmptyExtendedIwbSectionContentError";
+        return false;
+    }
+    QListIterator<QDomElement> nextExtendedIwbElement(mExtendedElements);
+    while (nextExtendedIwbElement.hasNext()) {
+        QDomElement curExtendedIwbElement = nextExtendedIwbElement.next();
+        //TODO write iwb extended element to mIWBContentWriter
+    }
+
+    return true;
+}
+
 // extended element options
 // editable, background, locked are supported for now
 
@@ -1183,7 +1234,8 @@ void UBCFFAdaptor::UBToCFFConverter::setCommonAttributesFromUBZ(const QDomElemen
 {
     qDebug() << "Parsing Common Attributes";
 
-    for (int i = 0; i < ubzElement.attributes().count(); i++)
+
+   for (int i = 0; i < ubzElement.attributes().count(); i++)
     {
         QDomNode attribute = ubzElement.attributes().item(i);
         QString attributeName = attribute.nodeName().remove("ub:");
@@ -1548,8 +1600,6 @@ bool UBCFFAdaptor::UBToCFFConverter::parseUBZPolygon(const QDomElement &element)
     return bRes;
 }
 
-
-
 bool UBCFFAdaptor::UBToCFFConverter::parseUBZPolyline(const QDomElement &element)
 {
     qDebug() << "||parsing polyline";
@@ -1573,7 +1623,7 @@ bool UBCFFAdaptor::UBToCFFConverter::parseUBZPolyline(const QDomElement &element
     if (!bRes) {
         qDebug() << "||error at parsing polygon";
         errorStr = "PolylineParsingError";
-     }
+    }
     return bRes;
 }
 
