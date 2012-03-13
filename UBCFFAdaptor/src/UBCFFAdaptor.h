@@ -11,6 +11,9 @@ class QDomElement;
 class QDomNode;
 class QuaZipFile;
 
+
+const int DEFAULT_LAYER = -100000;
+
 class UBCFFADAPTORSHARED_EXPORT UBCFFAdaptor {
     class UBToCFFConverter;
 
@@ -48,14 +51,12 @@ private:
     private:
         void fillNamespaces();
 
-        bool createXMLOutputPattern();
-
         bool parseMetadata();
         bool parseContent();
         bool parsePageset(const QStringList &pageFileNames);
         bool parsePage(const QString &pageFileName);
         bool parseSvgPageSection(const QDomElement &element);
-        bool writeSVGIwbSection();
+        bool writeSVGIwbPageSection();
         bool writeExtendedIwbSection();
         bool parseGroupPageSection(const QDomElement &element);
 
@@ -70,13 +71,16 @@ private:
 
         bool parseUBZPolygon(const QDomElement &element);
         bool parseUBZPolyline(const QDomElement &element);
-        bool parseUBZLine(const QDomElement &element);
-        bool addElementToResultModel(QDomElement &element){return true;}
+        bool parseUBZLine(const QDomElement &element);       
+        bool addSVGElementToResultModel(QDomElement &element, int layer = DEFAULT_LAYER);
+        bool addIWBElementToResultModel(QDomElement &element);
 
         QString getDstContentFolderName(QString elementType);
         QString getSrcContentFolderName(QString href);
         QString getFileNameFromPath(QString sPath);
         QString getElementTypeFromUBZ(const QDomElement &element);
+
+        int getElementLayer(const QDomElement &element);
 
         bool itIsSupportedFormat(const QString &format) const;
         bool itIsSVGAttribute(const QString &attribute) const;
@@ -93,7 +97,7 @@ private:
         bool setContentFromUBZ(const QDomElement &ubzElement, QDomElement &iwbElement);
         void setCFFTextFromUBZ(const QDomElement &ubzElement, QDomElement &iwbElement, QDomElement &svgElement);
         QString getCFFTextFromHTMLTextNode(const QDomElement htmlTextNode);
-        QString ubzAttrNamtToCFFAttrName(QString cffAttrName);
+        QString ubzAttrNameToCFFAttrName(QString cffAttrName);
 
         void setCFFAttribute(const QString &attributeName, const QString &attributeValue, const QDomElement &ubzElement, QDomElement &iwbElement,  QDomElement &svgElement);
         void setCommonAttributesFromUBZ(const QDomElement &ubzElement, QDomElement &iwbElement,  QDomElement &svgElement);
@@ -113,6 +117,7 @@ private:
         QRect mViewbox; //Main viewbox parameter for CFF
         QString sourcePath; // dir with unpacked source data (ubz)
         QString destinationPath; //dir with unpacked destination data (iwb)
+        QDomDocument *mDocumentToWrite; //document for saved QDomElements from mSvgElements and mExtendedElements
         QMultiMap<int, QDomElement> mSvgElements; //Saving svg elements to have a sorted by z order list of elements to write;
         QList<QDomElement> mExtendedElements; //Saving extended options of elements to be able to add them to the end of result iwb document;
 
