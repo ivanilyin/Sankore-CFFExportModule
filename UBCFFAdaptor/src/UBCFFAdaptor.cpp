@@ -376,7 +376,7 @@ bool UBCFFAdaptor::compressDir(const QString &dirName, const QString &parentDir,
         QFileInfo curFile = iter.next();
 
         if (curFile.isDir()) {
-            if (!compressDir(curFile.absoluteFilePath(), parentDir + curFile.dir().dirName() + "/", outZip)) {
+            if (!compressDir(curFile.absoluteFilePath(), parentDir + curFile.fileName() + "/", outZip)) {
                 qDebug() << "error at compressing dir" << curFile.absoluteFilePath();
                 return false;
             }
