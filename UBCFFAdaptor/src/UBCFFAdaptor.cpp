@@ -513,6 +513,7 @@ UBCFFAdaptor::UBToCFFConverter::UBToCFFConverter(const QString &source, const QS
     errorStr = noErrorMsg;
     mDataModel = new QDomDocument;
     mDocumentToWrite = new QDomDocument; 
+    mDocumentToWrite->setContent(QString("<doc></doc>"));
 
     mIWBContentWriter = new QXmlStreamWriter;
     mIWBContentWriter->setAutoFormatting(true);
@@ -645,7 +646,7 @@ bool UBCFFAdaptor::UBToCFFConverter::parseContent() {
 
     mIWBContentWriter->writeEndElement();//iwb svg section
 
-    if (writeExtendedIwbSection()) {
+    if (!writeExtendedIwbSection()) {
         if (errorStr == noErrorMsg)
             errorStr = "writeExtendedIwbSectionError";
         return false;
@@ -749,6 +750,34 @@ bool UBCFFAdaptor::UBToCFFConverter::parseSvgPageSection(const QDomElement &elem
 
     return true;
 }
+
+void UBCFFAdaptor::UBToCFFConverter::writeQDomElementToXML(const QDomNode &node)
+{
+ 
+    if (node.isText())
+    {
+        mIWBContentWriter->writeCharacters(node.nodeValue());
+    }   
+    else
+    {
+        mIWBContentWriter->writeStartElement(svgIWBNS, node.toElement().tagName());
+
+       for (int i = 0; i < node.toElement().attributes().count(); i++)
+       {
+            QDomAttr attr =  node.toElement().attributes().item(i).toAttr();
+            mIWBContentWriter->writeAttribute(attr.name(), attr.value());
+       }
+        QDomNode child = node.firstChild();
+        while(!child.isNull())
+        {
+            writeQDomElementToXML(child);
+            child = child.nextSibling();
+        }
+
+        mIWBContentWriter->writeEndElement();
+    }       
+}
+
 bool UBCFFAdaptor::UBToCFFConverter::writeSVGIwbPageSection()
 {
     if (!mSvgElements.count()) {
@@ -757,8 +786,9 @@ bool UBCFFAdaptor::UBToCFFConverter::writeSVGIwbPageSection()
         return false;
     }
     QMapIterator<int, QDomElement> nextSVGElement(mSvgElements);
-    while (nextSVGElement.hasNext()) {
-        QDomElement curSVGElement = nextSVGElement.next().value();
+    while (nextSVGElement.hasNext()) 
+    {
+        writeQDomElementToXML(nextSVGElement.next().value());
         //TODO write svg element to mIWBContentWriter
     }
 
@@ -774,7 +804,7 @@ bool UBCFFAdaptor::UBToCFFConverter::writeExtendedIwbSection()
     }
     QListIterator<QDomElement> nextExtendedIwbElement(mExtendedElements);
     while (nextExtendedIwbElement.hasNext()) {
-        QDomElement curExtendedIwbElement = nextExtendedIwbElement.next();
+        writeQDomElementToXML(nextExtendedIwbElement.next());
         //TODO write iwb extended element to mIWBContentWriter
     }
 
@@ -943,7 +973,7 @@ bool UBCFFAdaptor::UBToCFFConverter::ibwSetElementAsBackground(QDomElement &elem
 {
     QDomDocument doc;
 
-    QDomElement iwbElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + tElement);
+    QDomElement iwbElementPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":" + tElement);
 
     iwbElementPart.setAttribute(aRef, element.attribute(aID));
     iwbElementPart.setAttribute(aBackground, avTrue);
@@ -958,10 +988,10 @@ bool UBCFFAdaptor::UBToCFFConverter::ibwAddLine(int x1, int y1, int x2, int y2, 
 
     QDomDocument doc;
 
-    QDomElement svgBackgroundCrossPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":line");
-    QDomElement iwbBackgroundCrossPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + tElement);
+    QDomElement svgBackgroundCrossPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":line");
+    QDomElement iwbBackgroundCrossPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":" + tElement);
 
-    QString sUUID = QUuid::createUuid().toString();
+    QString sUUID = QUuid::createUuid().toString().remove("{").remove("}");
 
     svgBackgroundCrossPart.setTagName(tIWBLine);
 
@@ -1294,8 +1324,8 @@ bool UBCFFAdaptor::UBToCFFConverter::createBackground(const QDomElement &element
 
     QDomDocument doc;
 
-    QDomElement svgBackgroundElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":rect");
-    QDomElement iwbBackgroundElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + tElement);
+    QDomElement svgBackgroundElementPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":rect");
+    QDomElement iwbBackgroundElementPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":" + tElement);
 
     bool isDark = (avTrue == element.attribute(aDarkBackground));
 
@@ -1379,8 +1409,8 @@ bool UBCFFAdaptor::UBToCFFConverter::parseUBZImage(const QDomElement &element)
 
     QDomDocument doc;
 
-    QDomElement svgElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + getElementTypeFromUBZ(element));
-    QDomElement iwbElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + tElement);
+    QDomElement svgElementPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":" + getElementTypeFromUBZ(element));
+    QDomElement iwbElementPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":" + tElement);
 
     setCommonAttributesFromUBZ(element, iwbElementPart, svgElementPart);
 
@@ -1402,8 +1432,8 @@ bool UBCFFAdaptor::UBToCFFConverter::parseUBZVideo(const QDomElement &element)
 
     QDomDocument doc;
 
-    QDomElement svgElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + getElementTypeFromUBZ(element));
-    QDomElement iwbElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + tElement);
+    QDomElement svgElementPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":" + getElementTypeFromUBZ(element));
+    QDomElement iwbElementPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":" + tElement);
 
     setCommonAttributesFromUBZ(element, iwbElementPart, svgElementPart);   
 
@@ -1426,8 +1456,8 @@ bool UBCFFAdaptor::UBToCFFConverter::parseUBZAudio(const QDomElement &element)
 
     QDomDocument doc;
 
-    QDomElement svgElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + getElementTypeFromUBZ(element));
-    QDomElement iwbElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + tElement);
+    QDomElement svgElementPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":" + getElementTypeFromUBZ(element));
+    QDomElement iwbElementPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":" + tElement);
 
     setCommonAttributesFromUBZ(element, iwbElementPart, svgElementPart);
 
@@ -1458,8 +1488,8 @@ bool UBCFFAdaptor::UBToCFFConverter::parseForeignObject(const QDomElement &eleme
 
     QDomDocument doc;
 
-    QDomElement svgElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + getElementTypeFromUBZ(element));
-    QDomElement iwbElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + tElement);
+    QDomElement svgElementPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":" + getElementTypeFromUBZ(element));
+    QDomElement iwbElementPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":" + tElement);
 
     setCommonAttributesFromUBZ(element, iwbElementPart, svgElementPart);
 
@@ -1483,8 +1513,8 @@ bool UBCFFAdaptor::UBToCFFConverter::parseUBZText(const QDomElement &element)
 
     QDomDocument doc;
 
-    QDomElement svgElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + getElementTypeFromUBZ(element));
-    QDomElement iwbElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + tElement);
+    QDomElement svgElementPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":" + getElementTypeFromUBZ(element));
+    QDomElement iwbElementPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":" + tElement);
     
     setCommonAttributesFromUBZ(element, iwbElementPart, svgElementPart);
 
@@ -1558,8 +1588,8 @@ bool UBCFFAdaptor::UBToCFFConverter::parseUBZPolygon(const QDomElement &element)
 
     QDomDocument doc;
 
-    QDomElement svgElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + getElementTypeFromUBZ(element));
-    QDomElement iwbElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + tElement);
+    QDomElement svgElementPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":" + getElementTypeFromUBZ(element));
+    QDomElement iwbElementPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":" + tElement);
 
     setCommonAttributesFromUBZ(element, iwbElementPart, svgElementPart);
     QString id = QUuid::createUuid().toString();
@@ -1585,8 +1615,8 @@ bool UBCFFAdaptor::UBToCFFConverter::parseUBZPolyline(const QDomElement &element
 
     QDomDocument doc;
 
-    QDomElement svgElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + getElementTypeFromUBZ(element));
-    QDomElement iwbElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + tElement);
+    QDomElement svgElementPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":" + getElementTypeFromUBZ(element));
+    QDomElement iwbElementPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":" + tElement);
 
     setCommonAttributesFromUBZ(element, iwbElementPart, svgElementPart);
 
@@ -1612,8 +1642,8 @@ bool UBCFFAdaptor::UBToCFFConverter::parseUBZLine(const QDomElement &element)
 
     QDomDocument doc;
 
-    QDomElement svgElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + getElementTypeFromUBZ(element));
-    QDomElement iwbElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + tElement);
+    QDomElement svgElementPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":" + getElementTypeFromUBZ(element));
+    QDomElement iwbElementPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":" + tElement);
 
     setCommonAttributesFromUBZ(element, iwbElementPart, svgElementPart);
 
@@ -1638,7 +1668,7 @@ bool UBCFFAdaptor::UBToCFFConverter::addSVGElementToResultModel(QDomElement &ele
 {
     int elementLayer = (DEFAULT_LAYER == layer) ? DEFAULT_LAYER : layer;
     QDomElement rootElement = element.cloneNode(true).toElement();
-    mDocumentToWrite->appendChild(rootElement);
+    mDocumentToWrite->firstChildElement().appendChild(rootElement);
     mSvgElements.insert(elementLayer, rootElement);
     return true;
 }
@@ -1646,7 +1676,7 @@ bool UBCFFAdaptor::UBToCFFConverter::addSVGElementToResultModel(QDomElement &ele
 bool UBCFFAdaptor::UBToCFFConverter::addIWBElementToResultModel(QDomElement &element)
 {
     QDomElement rootElement = element.cloneNode(true).toElement();
-    mDocumentToWrite->appendChild(rootElement);
+    mDocumentToWrite->firstChildElement().appendChild(rootElement);
     mExtendedElements.append(rootElement);
     return true;
 }

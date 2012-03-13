@@ -56,6 +56,7 @@ private:
         bool parsePageset(const QStringList &pageFileNames);
         bool parsePage(const QString &pageFileName);
         bool parseSvgPageSection(const QDomElement &element);
+        void writeQDomElementToXML(const QDomNode &node);
         bool writeSVGIwbPageSection();
         bool writeExtendedIwbSection();
         bool parseGroupPageSection(const QDomElement &element);
