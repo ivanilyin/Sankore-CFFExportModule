@@ -82,6 +82,8 @@ const QString aZLayer = "z-value";
 const QString aLayer = "layer";
 const QString aTransform = "transform";
 const QString aLocked = "locked";
+const QString aIWBName = "name";
+const QString aIWBContent = "content";
 
 
 // Attribute values
@@ -588,7 +590,8 @@ bool UBCFFAdaptor::UBToCFFConverter::parseMetadata()
     if (!nextInElement.isNull()) {
 
         mIWBContentWriter->writeStartElement(iwbNS, tIWBMeta);
-        mIWBContentWriter->writeAttribute(aAbout, nextInElement.attribute(aAbout));
+        mIWBContentWriter->writeAttribute(aIWBName, aAbout);
+        mIWBContentWriter->writeAttribute(aIWBContent, nextInElement.attribute(aAbout));
         mIWBContentWriter->writeEndElement();
 
         nextInElement = nextInElement.firstChildElement();
@@ -607,7 +610,8 @@ bool UBCFFAdaptor::UBToCFFConverter::parseMetadata()
                     }
                 } else {
                     mIWBContentWriter->writeStartElement(iwbNS, tIWBMeta);
-                    mIWBContentWriter->writeAttribute(nextInElement.namespaceURI(), nextInElement.tagName(), textContent);
+                    mIWBContentWriter->writeAttribute(aIWBName, nextInElement.tagName());
+                    mIWBContentWriter->writeAttribute(aIWBContent, textContent);
                     mIWBContentWriter->writeEndElement();
                 }
 
