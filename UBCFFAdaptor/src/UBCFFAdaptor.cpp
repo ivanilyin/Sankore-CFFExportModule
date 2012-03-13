@@ -68,7 +68,7 @@ const QString aFill = "fill"; // IWB attribute contans color to fill
 
 const QString aID = "id";   // ID of any svg element can be placed in to iwb section
 const QString aRef = "ref"; // as reference for applying additional attributes
-const QString aHref = "href"; // reference to file
+const QString aHref = "xlink:href"; // reference to file
 const QString aSrc = "src";
 
 const QString aX = "x";
@@ -760,7 +760,7 @@ void UBCFFAdaptor::UBToCFFConverter::writeQDomElementToXML(const QDomNode &node)
     }   
     else
     {
-        mIWBContentWriter->writeStartElement(svgIWBNS, node.toElement().tagName());
+        mIWBContentWriter->writeStartElement(node.namespaceURI(), node.toElement().tagName());
 
        for (int i = 0; i < node.toElement().attributes().count(); i++)
        {
@@ -977,7 +977,6 @@ bool UBCFFAdaptor::UBToCFFConverter::ibwSetElementAsBackground(QDomElement &elem
 
     iwbElementPart.setAttribute(aRef, element.attribute(aID));
     iwbElementPart.setAttribute(aBackground, avTrue);
-    iwbElementPart.setAttribute(aZLayer, UBItemLayerType::FixedBackground);
   
     return addIWBElementToResultModel(iwbElementPart);
 }
@@ -988,7 +987,7 @@ bool UBCFFAdaptor::UBToCFFConverter::ibwAddLine(int x1, int y1, int x2, int y2, 
 
     QDomDocument doc;
 
-    QDomElement svgBackgroundCrossPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":line");
+    QDomElement svgBackgroundCrossPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":line");
     QDomElement iwbBackgroundCrossPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":" + tElement);
 
     QString sUUID = QUuid::createUuid().toString().remove("{").remove("}");
@@ -1324,7 +1323,7 @@ bool UBCFFAdaptor::UBToCFFConverter::createBackground(const QDomElement &element
 
     QDomDocument doc;
 
-    QDomElement svgBackgroundElementPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":rect");
+    QDomElement svgBackgroundElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":rect");
     QDomElement iwbBackgroundElementPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":" + tElement);
 
     bool isDark = (avTrue == element.attribute(aDarkBackground));
@@ -1409,7 +1408,7 @@ bool UBCFFAdaptor::UBToCFFConverter::parseUBZImage(const QDomElement &element)
 
     QDomDocument doc;
 
-    QDomElement svgElementPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":" + getElementTypeFromUBZ(element));
+    QDomElement svgElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + getElementTypeFromUBZ(element));
     QDomElement iwbElementPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":" + tElement);
 
     setCommonAttributesFromUBZ(element, iwbElementPart, svgElementPart);
@@ -1432,7 +1431,7 @@ bool UBCFFAdaptor::UBToCFFConverter::parseUBZVideo(const QDomElement &element)
 
     QDomDocument doc;
 
-    QDomElement svgElementPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":" + getElementTypeFromUBZ(element));
+    QDomElement svgElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + getElementTypeFromUBZ(element));
     QDomElement iwbElementPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":" + tElement);
 
     setCommonAttributesFromUBZ(element, iwbElementPart, svgElementPart);   
@@ -1456,7 +1455,7 @@ bool UBCFFAdaptor::UBToCFFConverter::parseUBZAudio(const QDomElement &element)
 
     QDomDocument doc;
 
-    QDomElement svgElementPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":" + getElementTypeFromUBZ(element));
+    QDomElement svgElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + getElementTypeFromUBZ(element));
     QDomElement iwbElementPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":" + tElement);
 
     setCommonAttributesFromUBZ(element, iwbElementPart, svgElementPart);
@@ -1488,7 +1487,7 @@ bool UBCFFAdaptor::UBToCFFConverter::parseForeignObject(const QDomElement &eleme
 
     QDomDocument doc;
 
-    QDomElement svgElementPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":" + getElementTypeFromUBZ(element));
+    QDomElement svgElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + getElementTypeFromUBZ(element));
     QDomElement iwbElementPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":" + tElement);
 
     setCommonAttributesFromUBZ(element, iwbElementPart, svgElementPart);
@@ -1513,7 +1512,7 @@ bool UBCFFAdaptor::UBToCFFConverter::parseUBZText(const QDomElement &element)
 
     QDomDocument doc;
 
-    QDomElement svgElementPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":" + getElementTypeFromUBZ(element));
+    QDomElement svgElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + getElementTypeFromUBZ(element));
     QDomElement iwbElementPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":" + tElement);
     
     setCommonAttributesFromUBZ(element, iwbElementPart, svgElementPart);
@@ -1588,7 +1587,7 @@ bool UBCFFAdaptor::UBToCFFConverter::parseUBZPolygon(const QDomElement &element)
 
     QDomDocument doc;
 
-    QDomElement svgElementPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":" + getElementTypeFromUBZ(element));
+    QDomElement svgElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + getElementTypeFromUBZ(element));
     QDomElement iwbElementPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":" + tElement);
 
     setCommonAttributesFromUBZ(element, iwbElementPart, svgElementPart);
@@ -1615,7 +1614,7 @@ bool UBCFFAdaptor::UBToCFFConverter::parseUBZPolyline(const QDomElement &element
 
     QDomDocument doc;
 
-    QDomElement svgElementPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":" + getElementTypeFromUBZ(element));
+    QDomElement svgElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + getElementTypeFromUBZ(element));
     QDomElement iwbElementPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":" + tElement);
 
     setCommonAttributesFromUBZ(element, iwbElementPart, svgElementPart);
@@ -1642,7 +1641,7 @@ bool UBCFFAdaptor::UBToCFFConverter::parseUBZLine(const QDomElement &element)
 
     QDomDocument doc;
 
-    QDomElement svgElementPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":" + getElementTypeFromUBZ(element));
+    QDomElement svgElementPart = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + getElementTypeFromUBZ(element));
     QDomElement iwbElementPart = doc.createElementNS(iwbNS,iwbNsPrefix + ":" + tElement);
 
     setCommonAttributesFromUBZ(element, iwbElementPart, svgElementPart);
