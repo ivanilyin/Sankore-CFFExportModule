@@ -76,6 +76,7 @@ private:
         bool addSVGElementToResultModel(QDomElement &element, int layer = DEFAULT_LAYER);
         bool addIWBElementToResultModel(QDomElement &element);
 
+        qreal getAngleFromTransform(QTransform &tr);
         QString getDstContentFolderName(QString elementType);
         QString getSrcContentFolderName(QString href);
         QString getFileNameFromPath(QString sPath);
@@ -95,13 +96,13 @@ private:
         QTransform getTransformFromUBZ(const QDomElement &ubzElement);
         void setGeometryFromUBZ(const QDomElement &ubzElement, QDomElement &iwbElement);
         void setCoordinatesFromUBZ(const QDomElement &ubzElement, QDomElement &iwbElement);
-        bool setContentFromUBZ(const QDomElement &ubzElement, QDomElement &iwbElement);
+        bool setContentFromUBZ(const QDomElement &ubzElement, QDomElement &svgElement);
         void setCFFTextFromUBZ(const QDomElement &ubzElement, QDomElement &iwbElement, QDomElement &svgElement);
         QString getCFFTextFromHTMLTextNode(const QDomElement htmlTextNode);
         QString ubzAttrNameToCFFAttrName(QString cffAttrName);
 
-        void setCFFAttribute(const QString &attributeName, const QString &attributeValue, const QDomElement &ubzElement, QDomElement &iwbElement,  QDomElement &svgElement);
-        void setCommonAttributesFromUBZ(const QDomElement &ubzElement, QDomElement &iwbElement,  QDomElement &svgElement);
+        bool setCFFAttribute(const QString &attributeName, const QString &attributeValue, const QDomElement &ubzElement, QDomElement &iwbElement,  QDomElement &svgElement);
+        bool setCommonAttributesFromUBZ(const QDomElement &ubzElement, QDomElement &iwbElement,  QDomElement &svgElement);
 
         QDomNode findTextNode(const QDomNode &node);
         QDomNode findNodeByTagName(const QDomNode &node, QString tagName);
