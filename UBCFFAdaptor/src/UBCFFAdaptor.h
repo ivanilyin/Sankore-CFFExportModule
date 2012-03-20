@@ -98,8 +98,9 @@ private:
         void setCoordinatesFromUBZ(const QDomElement &ubzElement, QDomElement &iwbElement);
         bool setContentFromUBZ(const QDomElement &ubzElement, QDomElement &svgElement);
         void setCFFTextFromUBZ(const QDomElement &ubzElement, QDomElement &iwbElement, QDomElement &svgElement);
-        QString getCFFTextFromHTMLTextNode(const QDomElement htmlTextNode);
+        void setCFFTextFromHTMLTextNode(const QDomElement htmlTextNode, QDomElement &iwbElement);
         QString ubzAttrNameToCFFAttrName(QString cffAttrName);
+        QString ubzAttrValueToCFFAttrName(QString cffAttrValue);
 
         bool setCFFAttribute(const QString &attributeName, const QString &attributeValue, const QDomElement &ubzElement, QDomElement &iwbElement,  QDomElement &svgElement);
         bool setCommonAttributesFromUBZ(const QDomElement &ubzElement, QDomElement &iwbElement,  QDomElement &svgElement);
