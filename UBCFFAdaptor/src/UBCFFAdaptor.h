@@ -11,9 +11,6 @@ class QDomElement;
 class QDomNode;
 class QuaZipFile;
 
-
-const int DEFAULT_LAYER = -100000;
-
 class UBCFFADAPTORSHARED_EXPORT UBCFFAdaptor {
     class UBToCFFConverter;
 
@@ -41,6 +38,8 @@ private:
 
     class UBToCFFConverter {
 
+       static const int DEFAULT_LAYER = -100000;
+
     public:
         UBToCFFConverter(const QString &source, const QString &destination);
         ~UBToCFFConverter();
@@ -62,6 +61,7 @@ private:
         bool parseGroupPageSection(const QDomElement &element);
 
         bool createBackground(const QDomElement &element);
+        QString createBackgroundImage(const QDomElement &element, QSize size);
 
         bool parseSVGGGroup(const QDomElement &element);
         bool parseUBZImage(const QDomElement &element);
@@ -85,11 +85,9 @@ private:
         int getElementLayer(const QDomElement &element);
 
         bool itIsSupportedFormat(const QString &format) const;
-        bool itIsSVGAttribute(const QString &attribute) const;
+        bool itIsSVGElementAttribute(const QString ItemType, const QString &AttrName);
         bool itIsIWBAttribute(const QString &attribute) const;
         bool itIsUBZAttributeToConvert(const QString &attribute) const;
-
-        bool ibwSetElementAsBackground(QDomElement &element);
 
         bool ibwAddLine(int x1, int y1, int x2, int y2, QString color=QString(), int width=1, bool isBackground=false);
 
@@ -108,6 +106,8 @@ private:
         QDomNode findTextNode(const QDomNode &node);
         QDomNode findNodeByTagName(const QDomNode &node, QString tagName);
 
+        QSize getSVGDimentions(const QString &element);
+
         inline QRect getViewboxRect(const QString &element) const;
         inline QString rectToIWBAttr(const QRect &rect) const;
         inline QString digitFileFormat(int num) const;
@@ -115,15 +115,16 @@ private:
         QString contentIWBFileName() const;
 
     private:
+        QMap<QString, QString> iwbSVGItemsAttributes;
         QDomDocument *mDataModel; //model for reading indata
         QXmlStreamWriter *mIWBContentWriter; //stream to write outdata
+        QSize mSVGSize; //svg page size
         QRect mViewbox; //Main viewbox parameter for CFF
         QString sourcePath; // dir with unpacked source data (ubz)
         QString destinationPath; //dir with unpacked destination data (iwb)
         QDomDocument *mDocumentToWrite; //document for saved QDomElements from mSvgElements and mExtendedElements
         QMultiMap<int, QDomElement> mSvgElements; //Saving svg elements to have a sorted by z order list of elements to write;
         QList<QDomElement> mExtendedElements; //Saving extended options of elements to be able to add them to the end of result iwb document;
-
         mutable QString errorStr; // last error string message
 
     public:

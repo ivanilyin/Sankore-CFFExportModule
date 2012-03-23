@@ -37,7 +37,8 @@ SOURCES += \
 HEADERS +=\
     src/UBCFFAdaptor.h \
     src/UBCFFAdaptor_global.h \
-    src/UBGlobals.h
+    src/UBGlobals.h \
+    src/UBCFFConstants.h
 
 unix:!symbian {
     maemo5 {
