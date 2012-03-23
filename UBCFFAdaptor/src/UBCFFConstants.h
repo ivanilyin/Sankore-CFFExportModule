@@ -51,6 +51,9 @@ const QString tIWBTspan = "tspan";
 
 // Attributes names
 const QString aIWBVersion = "version";
+const QString aOwner  = "owner";
+const QString aDescription  = "description";
+const QString aCreator  = "creator";
 const QString aAbout  = "about";
 const QString aIWBViewBox = "viewbox";
 const QString aUBZViewBox = "viewBox";
@@ -109,6 +112,10 @@ const QString xlinkNSPrefix = "xlink";
 const QString iwbNsPrefix = "iwb";
 const QString xsiPrefix = "xsi";
 const QString xsiSchemaLocationPrefix = "schemaLocation";
+
+const QString avOwner = "";
+const QString avCreator = "";
+const QString avDescription = "";
 
 //constant symbols and words etc
 const QString dimensionsDelimiter1 = "x";

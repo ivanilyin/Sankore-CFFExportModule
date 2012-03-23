@@ -413,6 +413,21 @@ bool UBCFFAdaptor::UBToCFFConverter::parseMetadata()
     if (!nextInElement.isNull()) {
 
         mIWBContentWriter->writeStartElement(iwbNS, tIWBMeta);
+        mIWBContentWriter->writeAttribute(aIWBName, aCreator);
+        mIWBContentWriter->writeAttribute(aIWBContent, avCreator);
+        mIWBContentWriter->writeEndElement();
+
+        mIWBContentWriter->writeStartElement(iwbNS, tIWBMeta);
+        mIWBContentWriter->writeAttribute(aIWBName, aOwner);
+        mIWBContentWriter->writeAttribute(aIWBContent, avOwner);
+        mIWBContentWriter->writeEndElement();
+
+        mIWBContentWriter->writeStartElement(iwbNS, tIWBMeta);
+        mIWBContentWriter->writeAttribute(aIWBName, aDescription);
+        mIWBContentWriter->writeAttribute(aIWBContent, avDescription);
+        mIWBContentWriter->writeEndElement();
+
+        mIWBContentWriter->writeStartElement(iwbNS, tIWBMeta);
         mIWBContentWriter->writeAttribute(aIWBName, aAbout);
         mIWBContentWriter->writeAttribute(aIWBContent, nextInElement.attribute(aAbout));
         mIWBContentWriter->writeEndElement();
