@@ -11,6 +11,7 @@ const int DEFAULT_BACKGROUND_CROSS_LAYER = -100001;
 // Constant fileNames;
 const QString fMetadata = "metadata.rdf";
 const QString fIWBContent = "content.xml";
+const QString fIWBBackground = "background.png";
 
 // Constant messages;
 const QString noErrorMsg = "NoError";
@@ -122,6 +123,12 @@ const QString dimensionsDelimiter1 = "x";
 const QString dimensionsDelimiter2 = " ";
 const QString pageAlias = "page";
 const QString pageFileExtentionUBZ = "svg";
+
+//content folder names
+const QString cfImages = "images";
+const QString cfVideos = "videos";
+const QString cfAudios = "audio";
+const QString cfFlash = "flash";
 
 const int iCrossSize = 32;
 const int iCrossWidth = 1;

@@ -677,14 +677,14 @@ QString UBCFFAdaptor::UBToCFFConverter::getDstContentFolderName(QString elementT
     QString sDstContentFolderName;
 
     // widgets must be saved as .png images.
-    if (("image" == elementType) || ("foreignObject" == elementType))
-        sDstContentFolderName = "images";
+    if ((tIWBImage == elementType) || (tUBZForeignObject == elementType))
+        sDstContentFolderName = cfImages;
     else
-    if ("video" == elementType)
-        sDstContentFolderName = "videos";    
+    if (tIWBVideo == elementType)
+        sDstContentFolderName = cfVideos;    
     else
-    if ("audio" == elementType)
-        sDstContentFolderName = "audios";
+    if (tIWBAudio == elementType)
+        sDstContentFolderName = cfAudios;
 
     sRet = sDstContentFolderName;
  
@@ -1307,63 +1307,67 @@ QString UBCFFAdaptor::UBToCFFConverter::createBackgroundImage(const QDomElement 
 {
     QString sRet;
 
-    QRect rect(0,0, size.width(), size.height());
-
-    QImage *bckImage = new QImage(size, QImage::Format_RGB888);
-
-    QPainter *painter = new QPainter(bckImage);   
-
-    bool darkBackground = (avTrue == element.attribute(aDarkBackground));
- 
-    QColor bCrossColor;
-
-    bCrossColor = darkBackground?QColor(Qt::white):QColor(Qt::blue);
-    int penAlpha = (int)(255/2); // default Sankore value for transform.m11 < 1
-    bCrossColor.setAlpha(penAlpha);
-    painter->setPen(bCrossColor);
-    painter->setBrush(darkBackground?QColor(Qt::black):QColor(Qt::white));
-
-    painter->drawRect(rect);
-
-    if (avTrue == element.attribute(aCrossedBackground))
-    {    
-        qreal firstY = ((int) (rect.y () / iCrossSize)) * iCrossSize;
-
-        for (qreal yPos = firstY; yPos <= rect.y () + rect.height (); yPos += iCrossSize)
-        {
-            painter->drawLine (rect.x (), yPos, rect.x () + rect.width (), yPos);
-        }
-
-        qreal firstX = ((int) (rect.x () / iCrossSize)) * iCrossSize;
-
-        for (qreal xPos = firstX; xPos <= rect.x () + rect.width (); xPos += iCrossSize)
-        {
-            painter->drawLine (xPos, rect.y (), xPos, rect.y () + rect.height ());
-        }
-    }
-    
-    painter->end();
-    painter->save();
-    
-
-    QString sDstContentFolder = "images"; 
-    QString sDstFileName("background.png");
+    QString sDstFileName(fIWBBackground);
 
     bool bDirExists = true;
     QDir dstDocFolder(destinationPath);
-    if (!dstDocFolder.exists(sDstContentFolder))
-        bDirExists &= dstDocFolder.mkdir(sDstContentFolder);
+
+    if (!dstDocFolder.exists(cfImages))
+        bDirExists &= dstDocFolder.mkdir(cfImages);
 
     QString dstFilePath;
     if (bDirExists)
-        dstFilePath = destinationPath+"/"+sDstContentFolder+"/"+sDstFileName;
+        dstFilePath = destinationPath+"/"+cfImages+"/"+sDstFileName;
 
-    if (QString() != dstFilePath)
-       if (bckImage->save(dstFilePath))
-           sRet = sDstContentFolder+"/"+sDstFileName;
+    if (!QFile().exists(dstFilePath))
+    {
+        QRect rect(0,0, size.width(), size.height());
 
-    delete bckImage;
-    delete painter;
+        QImage *bckImage = new QImage(size, QImage::Format_RGB888);
+
+        QPainter *painter = new QPainter(bckImage);   
+
+        bool darkBackground = (avTrue == element.attribute(aDarkBackground));
+     
+        QColor bCrossColor;
+
+        bCrossColor = darkBackground?QColor(Qt::white):QColor(Qt::blue);
+        int penAlpha = (int)(255/2); // default Sankore value for transform.m11 < 1
+        bCrossColor.setAlpha(penAlpha);
+        painter->setPen(bCrossColor);
+        painter->setBrush(darkBackground?QColor(Qt::black):QColor(Qt::white));
+
+        painter->drawRect(rect);
+
+        if (avTrue == element.attribute(aCrossedBackground))
+        {    
+            qreal firstY = ((int) (rect.y () / iCrossSize)) * iCrossSize;
+
+            for (qreal yPos = firstY; yPos <= rect.y () + rect.height (); yPos += iCrossSize)
+            {
+                painter->drawLine (rect.x (), yPos, rect.x () + rect.width (), yPos);
+            }
+
+            qreal firstX = ((int) (rect.x () / iCrossSize)) * iCrossSize;
+
+            for (qreal xPos = firstX; xPos <= rect.x () + rect.width (); xPos += iCrossSize)
+            {
+                painter->drawLine (xPos, rect.y (), xPos, rect.y () + rect.height ());
+            }
+        }
+        
+        painter->end();
+        painter->save();
+        
+        if (QString() != dstFilePath)
+           if (bckImage->save(dstFilePath))
+               sRet = cfImages+"/"+sDstFileName;
+
+        delete bckImage;
+        delete painter;
+    }
+    else 
+        sRet = cfImages+"/"+sDstFileName;
 
     return sRet;
 }
