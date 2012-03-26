@@ -130,6 +130,11 @@ const QString cfVideos = "videos";
 const QString cfAudios = "audio";
 const QString cfFlash = "flash";
 
+//known file extentions
+const QString feSvg = "svg";
+const QString feWgt = "wgt";
+const QString fePng = "png";
+
 const int iCrossSize = 32;
 const int iCrossWidth = 1;
 
@@ -161,6 +166,7 @@ wav \
 ");
 
 const QString cffSupportedFileFormats(iwbElementImage + iwbElementVideo + iwbElementAudio);
+const QString ubzFormatsToConvert("svg");
 
 
 const QString iwbSVGImageAttributes(" \

@@ -20,6 +20,7 @@ LIBS        += "-L$$QUAZIP_DIR/lib/$$SUB_DIR" "-lquazip"
 
 QT       += xml xmlpatterns core
 QT       += gui
+QT       += svg 
 
 TARGET = CFF_Adaptor
 TEMPLATE = lib

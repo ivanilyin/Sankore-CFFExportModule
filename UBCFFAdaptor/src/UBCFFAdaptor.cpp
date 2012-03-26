@@ -4,6 +4,7 @@
 #include <QtXml>
 #include <QTransform>
 #include <QGraphicsItem>
+#include <QSvgRenderer>
 #include <QPainter>
 
 #include "UBGlobals.h"
@@ -671,7 +672,7 @@ bool UBCFFAdaptor::UBToCFFConverter::parseGroupPageSection(const QDomElement &el
     return true;
 }
 
-QString UBCFFAdaptor::UBToCFFConverter::getDstContentFolderName(QString elementType)
+QString UBCFFAdaptor::UBToCFFConverter::getDstContentFolderName(const QString &elementType)
 {
     QString sRet;
     QString sDstContentFolderName;
@@ -707,7 +708,7 @@ QString UBCFFAdaptor::UBToCFFConverter::getSrcContentFolderName(QString href)
     return sRet;   
 }
 
-QString UBCFFAdaptor::UBToCFFConverter::getFileNameFromPath(QString sPath)
+QString UBCFFAdaptor::UBToCFFConverter::getFileNameFromPath(const QString sPath)
 {
     QString sRet;
     QStringList sl = sPath.split("/",QString::SkipEmptyParts);
@@ -715,28 +716,31 @@ QString UBCFFAdaptor::UBToCFFConverter::getFileNameFromPath(QString sPath)
     if (0 < sl.count())
     {
         QString name = sl.at(sl.count()-1);
+        QString extention = name.split(".").at(name.split(".").count()-1);
 
-        // if item is widtet - take preview.       
-        if(name.endsWith(".wgt"))
+        if (feWgt == extention)
         {
-            qDebug() << "element is widget";
-            name.remove(".wgt");
             name.remove("{");
             name.remove("}");
-            name += ".png";
         }
-        else    // .svg must be saved as .png because of it is not suppotrted in CFF.
-        if(name.endsWith(".svg"))
-        {
-            qDebug() << "element is svg image";
-            name.remove(".svg");
-            name.remove("{");
-            name.remove("}");
-            name += ".png";
-        }
+
+        name.remove(extention);
+        name += convertExtention(extention);
 
         sRet = name;
     }
+    return sRet;
+}
+
+QString UBCFFAdaptor::UBToCFFConverter::convertExtention(const QString &ext)
+{
+    QString sRet;
+
+    if (feSvg == ext)
+        sRet = fePng;
+    else 
+        sRet = ext;
+
     return sRet;
 }
 
@@ -805,6 +809,16 @@ bool UBCFFAdaptor::UBToCFFConverter::itIsSupportedFormat(const QString &format) 
         bRet = false;
 
     return bRet;
+}
+
+bool UBCFFAdaptor::UBToCFFConverter::itIsFormatToConvert(const QString &format) const
+{
+    foreach (QString f, ubzFormatsToConvert.split(","))
+    {
+        if (format == f)
+            return true;
+    }
+    return false;
 }
 
 bool UBCFFAdaptor::UBToCFFConverter::itIsSVGElementAttribute(const QString ItemType, const QString &AttrName)
@@ -929,7 +943,7 @@ QTransform UBCFFAdaptor::UBToCFFConverter::getTransformFromUBZ(const QDomElement
     return trRet;
 }
 
-qreal UBCFFAdaptor::UBToCFFConverter::getAngleFromTransform(QTransform &tr)
+qreal UBCFFAdaptor::UBToCFFConverter::getAngleFromTransform(const QTransform &tr)
 {
     qreal angle = -(atan(tr.m21()/tr.m11())*180/PI);
     if (tr.m21() > 0 && tr.m11() < 0) 
@@ -991,25 +1005,23 @@ bool UBCFFAdaptor::UBToCFFConverter::setContentFromUBZ(const QDomElement &ubzEle
     else 
         srcPath = ubzElement.attribute(aSrc);
 
-    QString sFilename = getFileNameFromPath(srcPath);
-    
     QString sSrcContentFolder = getSrcContentFolderName(srcPath);
-    QString sSrcFileName(sourcePath + "/" + sSrcContentFolder + "/" + sFilename);
+    QString sSrcFileName = sourcePath + "/" + srcPath;
+    QStringList tl = sSrcFileName.split(".");
+    QString fileExtention = tl.at(tl.count()-1);
+    QString sDstContentFolder = getDstContentFolderName(ubzElement.tagName());
+    QString sDstFileName(QString(QUuid::createUuid().toString()+"."+convertExtention(fileExtention)).remove("{").remove("}"));
 
-    if (itIsSupportedFormat(sSrcFileName))
-    { 
 
-        QString sDstContentFolder = getDstContentFolderName(ubzElement.tagName());
-        QStringList tl = sSrcFileName.split(".");
-        QString fileExtantion = tl.at(tl.count()-1);
-        QString sDstFileName(QUuid::createUuid().toString()+"."+fileExtantion);
-        sDstFileName = sDstFileName.remove("{").remove("}");
-  
+    if (itIsSupportedFormat(fileExtention)) // format is supported and we can copy src. files without changing.
+    {
+        QString sFilename = getFileNameFromPath(srcPath); // some elements must be exported as images, so we take hes existing thumbnails.
+
         QFile srcFile;
         srcFile.setFileName(sSrcFileName);
 
         QDir dstDocFolder(destinationPath);
-        
+
         if (!dstDocFolder.exists(sDstContentFolder))
             bRet &= dstDocFolder.mkdir(sDstContentFolder);
 
@@ -1022,11 +1034,36 @@ bool UBCFFAdaptor::UBToCFFConverter::setContentFromUBZ(const QDomElement &ubzEle
 
         if (bRet)
             svgElement.setAttribute(aSVGHref, sDstContentFolder+"/"+sDstFileName);
+
     }
-    else 
+    else
+    if (itIsFormatToConvert(fileExtention)) // we cannot copy that source files. We need to create dst. file from src. file without copy. 
+    {
+        QDir dstDocFolder(destinationPath);
+
+        if (!dstDocFolder.exists(sDstContentFolder))
+            bRet &= dstDocFolder.mkdir(sDstContentFolder);
+
+        if (bRet)
+        {
+            if (feSvg == fileExtention) // svg images must be converted to PNG.
+            {           
+                QTransform tr = getTransformFromUBZ(ubzElement);
+                QString dstFilePath = destinationPath+"/"+sDstContentFolder+"/"+sDstFileName;
+                bRet &= createPngFromSvg(sSrcFileName, dstFilePath, tr);
+            }
+            else
+                bRet = false;
+        }
+
+        if (bRet)
+            svgElement.setAttribute(aSVGHref, sDstContentFolder+"/"+sDstFileName);
+
+    }
+   
+    if (!bRet)
     {
         qDebug() << "format is not supported by CFF";
-        bRet = false;
     }
 
     return bRet;
@@ -1372,6 +1409,30 @@ QString UBCFFAdaptor::UBToCFFConverter::createBackgroundImage(const QDomElement 
     return sRet;
 }
 
+bool UBCFFAdaptor::UBToCFFConverter::createPngFromSvg(QString &svgPath, QString &dstPath, QTransform transformation)
+{
+    if (QFile().exists(svgPath))
+    {
+        QImage i(svgPath);
+        QSize iSize(i.size().width()*transformation.m11(), i.size().height()*transformation.m22());
+        QImage image(iSize, QImage::Format_ARGB32_Premultiplied);
+        
+        image.fill(0);
+        QPainter imagePainter(&image);
+
+        QSvgRenderer renderer(svgPath);
+     
+        renderer.render(&imagePainter);     
+      
+
+        return image.save(dstPath);
+
+    }
+    else 
+        return false;
+}
+
+
 bool UBCFFAdaptor::UBToCFFConverter::parseSVGGGroup(const QDomElement &element)
 {
     qDebug() << "|parsing g section";
@@ -1670,7 +1731,7 @@ bool UBCFFAdaptor::UBToCFFConverter::parseUBZLine(const QDomElement &element)
     return bRes;
 }
 
-bool UBCFFAdaptor::UBToCFFConverter::addSVGElementToResultModel(QDomElement &element, int layer)
+bool UBCFFAdaptor::UBToCFFConverter::addSVGElementToResultModel(const QDomElement &element, int layer)
 {
     int elementLayer = (DEFAULT_LAYER == layer) ? DEFAULT_LAYER : layer;
     mSvgElements.setInsertInOrder(true);
@@ -1681,7 +1742,7 @@ bool UBCFFAdaptor::UBToCFFConverter::addSVGElementToResultModel(QDomElement &ele
     return true;
 }
 
-bool UBCFFAdaptor::UBToCFFConverter::addIWBElementToResultModel(QDomElement &element)
+bool UBCFFAdaptor::UBToCFFConverter::addIWBElementToResultModel(const QDomElement &element)
 {
     QDomElement rootElement = element.cloneNode(true).toElement();
     mDocumentToWrite->firstChildElement().appendChild(rootElement);

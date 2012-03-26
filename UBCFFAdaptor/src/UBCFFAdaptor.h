@@ -62,6 +62,7 @@ private:
 
         bool createBackground(const QDomElement &element);
         QString createBackgroundImage(const QDomElement &element, QSize size);
+        bool createPngFromSvg(QString &svgPath, QString &dstPath,  QTransform transformation);
 
         bool parseSVGGGroup(const QDomElement &element);
         bool parseUBZImage(const QDomElement &element);
@@ -73,18 +74,20 @@ private:
         bool parseUBZPolygon(const QDomElement &element);
         bool parseUBZPolyline(const QDomElement &element);
         bool parseUBZLine(const QDomElement &element);       
-        bool addSVGElementToResultModel(QDomElement &element, int layer = DEFAULT_LAYER);
-        bool addIWBElementToResultModel(QDomElement &element);
+        bool addSVGElementToResultModel(const QDomElement &element, int layer = DEFAULT_LAYER);
+        bool addIWBElementToResultModel(const QDomElement &element);
 
-        qreal getAngleFromTransform(QTransform &tr);
-        QString getDstContentFolderName(QString elementType);
+        qreal getAngleFromTransform(const QTransform &tr);
+        QString getDstContentFolderName(const QString &elementType);
         QString getSrcContentFolderName(QString href);
         QString getFileNameFromPath(QString sPath);
+        QString convertExtention(const QString &ext);
         QString getElementTypeFromUBZ(const QDomElement &element);
 
         int getElementLayer(const QDomElement &element);
 
         bool itIsSupportedFormat(const QString &format) const;
+        bool itIsFormatToConvert(const QString &format) const;
         bool itIsSVGElementAttribute(const QString ItemType, const QString &AttrName);
         bool itIsIWBAttribute(const QString &attribute) const;
         bool itIsUBZAttributeToConvert(const QString &attribute) const;
