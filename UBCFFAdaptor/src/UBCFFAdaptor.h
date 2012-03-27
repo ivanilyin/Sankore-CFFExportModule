@@ -71,11 +71,11 @@ private:
         bool parseForeignObject(const QDomElement &element);
         bool parseUBZText(const QDomElement &element);
 
-        bool parseUBZPolygon(const QDomElement &element);
-        bool parseUBZPolyline(const QDomElement &element);
-        bool parseUBZLine(const QDomElement &element);       
-        bool addSVGElementToResultModel(const QDomElement &element, int layer = DEFAULT_LAYER);
-        bool addIWBElementToResultModel(const QDomElement &element);
+        bool parseUBZPolygon(const QDomElement &element, QMultiMap<int, QDomElement> &dstSvgList, QList<QDomElement> &dstIwbList);
+        bool parseUBZPolyline(const QDomElement &element, QMultiMap<int, QDomElement> &dstSvgList, QList<QDomElement> &dstIwbList);
+        bool parseUBZLine(const QDomElement &element, QMultiMap<int, QDomElement> &dstSvgList, QList<QDomElement> &dstIwbList);       
+        void addSVGElementToResultModel(const QDomElement &element, QMultiMap<int, QDomElement> &dstList, int layer = DEFAULT_LAYER);
+        void addIWBElementToResultModel(const QDomElement &element, QList<QDomElement> &dstList);
 
         qreal getAngleFromTransform(const QTransform &tr);
         QString getDstContentFolderName(const QString &elementType);

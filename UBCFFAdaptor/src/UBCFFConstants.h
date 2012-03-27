@@ -39,6 +39,7 @@ const QString tUBZForeignObject = "foreignObject";
 const QString tUBZTextContent = "itemTextContent";
 
 const QString tIWBA = "a";
+const QString tIWBG = "g";
 const QString tIWBSwitch = "switch";
 const QString tIWBImage = "image";
 const QString tIWBVideo = "video";
