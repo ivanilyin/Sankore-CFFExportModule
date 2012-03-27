@@ -1035,7 +1035,7 @@ bool UBCFFAdaptor::UBToCFFConverter::setContentFromUBZ(const QDomElement &ubzEle
         srcPath = ubzElement.attribute(aSrc);
 
     QString sSrcContentFolder = getSrcContentFolderName(srcPath);
-    QString sSrcFileName = sourcePath + "/" + srcPath;
+    QString sSrcFileName = sourcePath + "/" + srcPath ;
     QString fileExtention = getExtentionFromFileName(sSrcFileName);
     QString sDstContentFolder = getDstContentFolderName(ubzElement.tagName());
     QString sDstFileName(QString(QUuid::createUuid().toString()+"."+convertExtention(fileExtention)).remove("{").remove("}"));
@@ -1043,7 +1043,7 @@ bool UBCFFAdaptor::UBToCFFConverter::setContentFromUBZ(const QDomElement &ubzEle
 
     if (itIsSupportedFormat(fileExtention)) // format is supported and we can copy src. files without changing.
     {
-        QString sFilename = getFileNameFromPath(srcPath); // some elements must be exported as images, so we take hes existing thumbnails.
+        sSrcFileName = sourcePath + "/" + sSrcContentFolder + "/" + getFileNameFromPath(srcPath); // some elements must be exported as images, so we take hes existing thumbnails.
 
         QFile srcFile;
         srcFile.setFileName(sSrcFileName);
@@ -1555,7 +1555,7 @@ bool UBCFFAdaptor::UBToCFFConverter::parseUBZVideo(const QDomElement &element)
 
         svgSwitchSection.appendChild(svgText);
 
-        addSVGElementToResultModel(svgElementPart, mSvgElements, getElementLayer(element));
+        addSVGElementToResultModel(svgSwitchSection, mSvgElements, getElementLayer(element));
 
         if (0 < iwbElementPart.attributes().count())
             addIWBElementToResultModel(iwbElementPart, mExtendedElements);  
@@ -1634,7 +1634,7 @@ bool UBCFFAdaptor::UBToCFFConverter::parseUBZAudio(const QDomElement &element)
 
             svgSwitchSection.appendChild(svgText);
 
-            addSVGElementToResultModel(svgElementPart, mSvgElements,getElementLayer(element));
+            addSVGElementToResultModel(svgSwitchSection, mSvgElements,getElementLayer(element));
 
             if (0 < iwbElementPart.attributes().count())
                 addIWBElementToResultModel(iwbElementPart, mExtendedElements);
