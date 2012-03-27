@@ -12,6 +12,7 @@ const int DEFAULT_BACKGROUND_CROSS_LAYER = -100001;
 const QString fMetadata = "metadata.rdf";
 const QString fIWBContent = "content.xml";
 const QString fIWBBackground = "background.png";
+const QString sAudioElementImage = "/resources/images/soundOn.svg";
 
 // Constant messages;
 const QString noErrorMsg = "NoError";
@@ -37,6 +38,8 @@ const QString tUBZImage = "image";
 const QString tUBZForeignObject = "foreignObject";
 const QString tUBZTextContent = "itemTextContent";
 
+const QString tIWBA = "a";
+const QString tIWBSwitch = "switch";
 const QString tIWBImage = "image";
 const QString tIWBVideo = "video";
 const QString tIWBAudio = "audio";
@@ -68,7 +71,7 @@ const QString aFill = "fill"; // IWB attribute contans color to fill
 const QString aID = "id";   // ID of any svg element can be placed in to iwb section
 const QString aRef = "ref"; // as reference for applying additional attributes
 const QString aSVGHref = "xlink:href"; // reference to file
-const QString aIWBHref = "href"; // reference to file
+const QString aIWBHref = "ref"; // reference to element ID
 const QString aUBZHref = "href";
 const QString aSrc = "src";
 
@@ -126,7 +129,7 @@ const QString pageFileExtentionUBZ = "svg";
 
 //content folder names
 const QString cfImages = "images";
-const QString cfVideos = "videos";
+const QString cfVideos = "video";
 const QString cfAudios = "audio";
 const QString cfFlash = "flash";
 

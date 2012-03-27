@@ -716,7 +716,7 @@ QString UBCFFAdaptor::UBToCFFConverter::getFileNameFromPath(const QString sPath)
     if (0 < sl.count())
     {
         QString name = sl.at(sl.count()-1);
-        QString extention = name.split(".").at(name.split(".").count()-1);
+        QString extention = getExtentionFromFileName(name);
 
         if (feWgt == extention)
         {
@@ -724,7 +724,7 @@ QString UBCFFAdaptor::UBToCFFConverter::getFileNameFromPath(const QString sPath)
             name.remove("}");
         }
 
-        name.remove(extention);
+        name.remove(name.length()-extention.length(), extention.length());
         name += convertExtention(extention);
 
         sRet = name;
@@ -732,11 +732,26 @@ QString UBCFFAdaptor::UBToCFFConverter::getFileNameFromPath(const QString sPath)
     return sRet;
 }
 
+QString UBCFFAdaptor::UBToCFFConverter::getExtentionFromFileName(const QString &filename)
+{
+    QStringList sl = filename.split("/",QString::SkipEmptyParts);
+
+    if (0 < sl.count())
+    {
+        QString name = sl.at(sl.count()-1);
+        QStringList tl = name.split(".");
+        return tl.at(tl.count()-1);
+    }
+}
+
 QString UBCFFAdaptor::UBToCFFConverter::convertExtention(const QString &ext)
 {
     QString sRet;
 
     if (feSvg == ext)
+        sRet = fePng;
+    else
+    if (feWgt == ext)
         sRet = fePng;
     else 
         sRet = ext;
@@ -762,8 +777,8 @@ QString UBCFFAdaptor::UBToCFFConverter::getElementTypeFromUBZ(const QDomElement 
             if (element.hasAttribute(aSrc))
                 sPath = element.attribute(aSrc);
             else 
-            if (element.hasAttribute(aIWBHref))
-                sPath = element.attribute(aIWBHref);
+            if (element.hasAttribute(aUBZHref))
+                sPath = element.attribute(aUBZHref);
 
             QStringList tsl = sPath.split(".", QString::SkipEmptyParts);
             if (0 < tsl.count())
@@ -788,14 +803,20 @@ QString UBCFFAdaptor::UBToCFFConverter::getElementTypeFromUBZ(const QDomElement 
 
 int UBCFFAdaptor::UBToCFFConverter::getElementLayer(const QDomElement &element)
 {
+    int iRetLayer = 0;
     int zLayer = 0;
     if (element.hasAttribute(aZLayer))
         zLayer = (int)element.attribute(aZLayer).toDouble();
 
     if (element.hasAttribute(aLayer))
-        return element.attribute(aLayer).toInt()+zLayer;
+        iRetLayer = element.attribute(aLayer).toInt()+zLayer;
     else 
-        return DEFAULT_LAYER+zLayer;
+        iRetLayer = DEFAULT_LAYER+zLayer;
+
+    if (iRetLayer <= DEFAULT_BACKGROUND_CROSS_LAYER)
+        iRetLayer += (DEFAULT_BACKGROUND_CROSS_LAYER - iRetLayer)+1;
+
+    return iRetLayer;
 }
 
 bool UBCFFAdaptor::UBToCFFConverter::itIsSupportedFormat(const QString &format) const
@@ -1007,8 +1028,7 @@ bool UBCFFAdaptor::UBToCFFConverter::setContentFromUBZ(const QDomElement &ubzEle
 
     QString sSrcContentFolder = getSrcContentFolderName(srcPath);
     QString sSrcFileName = sourcePath + "/" + srcPath;
-    QStringList tl = sSrcFileName.split(".");
-    QString fileExtention = tl.at(tl.count()-1);
+    QString fileExtention = getExtentionFromFileName(sSrcFileName);
     QString sDstContentFolder = getDstContentFolderName(ubzElement.tagName());
     QString sDstFileName(QString(QUuid::createUuid().toString()+"."+convertExtention(fileExtention)).remove("{").remove("}"));
 
@@ -1031,34 +1051,33 @@ bool UBCFFAdaptor::UBToCFFConverter::setContentFromUBZ(const QDomElement &ubzEle
             bRet &= srcFile.copy(dstFilePath);
         }
 
-
         if (bRet)
             svgElement.setAttribute(aSVGHref, sDstContentFolder+"/"+sDstFileName);
-
     }
     else
     if (itIsFormatToConvert(fileExtention)) // we cannot copy that source files. We need to create dst. file from src. file without copy. 
     {
-        QDir dstDocFolder(destinationPath);
-
-        if (!dstDocFolder.exists(sDstContentFolder))
-            bRet &= dstDocFolder.mkdir(sDstContentFolder);
-
-        if (bRet)
+        if (feSvg == fileExtention)
         {
-            if (feSvg == fileExtention) // svg images must be converted to PNG.
-            {           
-                QTransform tr = getTransformFromUBZ(ubzElement);
-                QString dstFilePath = destinationPath+"/"+sDstContentFolder+"/"+sDstFileName;
-                bRet &= createPngFromSvg(sSrcFileName, dstFilePath, tr);
+            QDir dstDocFolder(destinationPath);
+
+            if (!dstDocFolder.exists(sDstContentFolder))
+                bRet &= dstDocFolder.mkdir(sDstContentFolder);
+
+            if (bRet)
+            {
+                if (feSvg == fileExtention) // svg images must be converted to PNG.
+                {           
+                    QString dstFilePath = destinationPath+"/"+sDstContentFolder+"/"+sDstFileName;
+                    bRet &= createPngFromSvg(sSrcFileName, dstFilePath, getTransformFromUBZ(ubzElement));
+                }
+                else
+                    bRet = false;
             }
-            else
-                bRet = false;
+
+            if (bRet)
+                svgElement.setAttribute(aSVGHref, sDstContentFolder+"/"+sDstFileName);
         }
-
-        if (bRet)
-            svgElement.setAttribute(aSVGHref, sDstContentFolder+"/"+sDstFileName);
-
     }
    
     if (!bRet)
@@ -1180,7 +1199,7 @@ bool UBCFFAdaptor::UBToCFFConverter::setCFFAttribute(const QString &attributeNam
             setGeometryFromUBZ(ubzElement, svgElement);
         }
         else 
-            if (attributeName.contains(aIWBHref)||attributeName.contains(aSrc))
+            if (attributeName.contains(aUBZHref)||attributeName.contains(aSrc))
             {
                 bRet &= setContentFromUBZ(ubzElement, svgElement);
                 bNeedsIWBSection = bRet||bNeedsIWBSection;
@@ -1409,22 +1428,20 @@ QString UBCFFAdaptor::UBToCFFConverter::createBackgroundImage(const QDomElement 
     return sRet;
 }
 
-bool UBCFFAdaptor::UBToCFFConverter::createPngFromSvg(QString &svgPath, QString &dstPath, QTransform transformation)
+bool UBCFFAdaptor::UBToCFFConverter::createPngFromSvg(QString &svgPath, QString &dstPath, QTransform transformation, QSize size)
 {
     if (QFile().exists(svgPath))
     {
         QImage i(svgPath);
-        QSize iSize(i.size().width()*transformation.m11(), i.size().height()*transformation.m22());
-        QImage image(iSize, QImage::Format_ARGB32_Premultiplied);
-        
+
+        QSize iSize = (QSize() == size)?QSize(i.size().width()*transformation.m11(), i.size().height()*transformation.m22()):size;
+
+        QImage image(iSize, QImage::Format_ARGB32_Premultiplied);        
         image.fill(0);
         QPainter imagePainter(&image);
-
-        QSvgRenderer renderer(svgPath);
-     
+        QSvgRenderer renderer(svgPath);  
         renderer.render(&imagePainter);     
       
-
         return image.save(dstPath);
 
     }
@@ -1493,7 +1510,23 @@ bool UBCFFAdaptor::UBToCFFConverter::parseUBZVideo(const QDomElement &element)
     bRes &= setCommonAttributesFromUBZ(element, iwbElementPart, svgElementPart);   
     if (bRes)
     {
-        bRes &= addSVGElementToResultModel(svgElementPart, getElementLayer(element));    
+        QDomElement svgSwitchSection = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + tIWBSwitch);
+        svgSwitchSection.appendChild(svgElementPart);
+
+        // if viewer cannot open that content - it must use that:
+        QDomElement svgText = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + tIWBTextArea);
+        svgText.setAttribute(aX, svgElementPart.attribute(aX));
+        svgText.setAttribute(aY, svgElementPart.attribute(aY));
+        svgText.setAttribute(aWidth, svgElementPart.attribute(aWidth));
+        svgText.setAttribute(aHeight, svgElementPart.attribute(aHeight));
+        svgText.setAttribute(aTransform, svgElementPart.attribute(aTransform));
+
+        QDomText text = doc.createTextNode("Cannot Open Content");  
+        svgText.appendChild(text);
+
+        svgSwitchSection.appendChild(svgText);
+
+        bRes &= addSVGElementToResultModel(svgSwitchSection, getElementLayer(element));    
         if (0 < iwbElementPart.attributes().count())
             bRes &= addIWBElementToResultModel(iwbElementPart);  
     }
@@ -1510,6 +1543,13 @@ bool UBCFFAdaptor::UBToCFFConverter::parseUBZAudio(const QDomElement &element)
 {
     qDebug() << "|parsing audio";
 
+    // audio file must be linked to cff item excluding video.
+    // to do:
+    // 1 add image for audio element.
+    // 2 set id for this element
+    // 3 add <svg:a> section with xlink:href to audio file
+    // 4 add shild to a section with id of the image
+
     bool bRes = true;
 
     QDomDocument doc;
@@ -1521,9 +1561,61 @@ bool UBCFFAdaptor::UBToCFFConverter::parseUBZAudio(const QDomElement &element)
 
     if (bRes)
     {
-        bRes &= addSVGElementToResultModel(svgElementPart, getElementLayer(element));    
-        if (0 < iwbElementPart.attributes().count())
-            bRes &= addIWBElementToResultModel(iwbElementPart);
+        //we must create image-containers for audio files
+        int audioImageDimention = qMin(svgElementPart.attribute(aWidth).toInt(), svgElementPart.attribute(aHeight).toInt());
+        QString srcAudioImageFile(QCoreApplication::applicationDirPath()+sAudioElementImage);
+        QString elementId = QString(QUuid::createUuid().toString()).remove("{").remove("}");
+        QString sDstAudioImageFileName = elementId+"."+fePng;
+        QString dstAudioImageFilePath = destinationPath+"/"+cfImages+"/"+sDstAudioImageFileName;
+        QString dstAudioImageRelativePath = cfImages+"/"+sDstAudioImageFileName;
+
+        QFile srcFile(srcAudioImageFile);
+
+        //creating folder for audioImage
+        QDir dstDocFolder(destinationPath);
+        if (!dstDocFolder.exists(cfImages))
+            bRes &= dstDocFolder.mkdir(cfImages);
+        
+        // CFF cannot show SVG images, so we need to convert it to png.
+        if (bRes)
+            bRes &= createPngFromSvg(srcAudioImageFile, dstAudioImageFilePath, getTransformFromUBZ(element), QSize(audioImageDimention, audioImageDimention));
+
+        // all is OK. Now we can create DOM Elements 
+        if (bRes)
+        {
+            QDomElement svgSwitchSection = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + tIWBSwitch);
+
+            // first we place content
+            QDomElement svgASection = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + tIWBA);
+            svgASection.setAttribute(aSVGHref, svgElementPart.attribute(aSVGHref));
+        
+            svgElementPart.setTagName(tIWBImage);
+            svgElementPart.setAttribute(aSVGHref, dstAudioImageRelativePath); 
+            svgElementPart.setAttribute(aHeight, audioImageDimention);
+            svgElementPart.setAttribute(aWidth, audioImageDimention);
+
+            svgASection.appendChild(svgElementPart);
+
+            svgSwitchSection.appendChild(svgASection);
+
+            // if viewer cannot open that content - it must use that:
+            QDomElement svgText = doc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + tIWBTextArea);
+            svgText.setAttribute(aX, svgElementPart.attribute(aX));
+            svgText.setAttribute(aY, svgElementPart.attribute(aY));
+            svgText.setAttribute(aWidth, svgElementPart.attribute(aWidth));
+            svgText.setAttribute(aHeight, svgElementPart.attribute(aHeight));
+            svgText.setAttribute(aTransform, svgElementPart.attribute(aTransform));
+
+            QDomText text = doc.createTextNode("Cannot Open Content");  
+            svgText.appendChild(text);
+
+            svgSwitchSection.appendChild(svgText);
+
+            bRes &= addSVGElementToResultModel(svgSwitchSection, getElementLayer(element));    
+
+            if (0 < iwbElementPart.attributes().count() && bRes)
+                bRes &= addIWBElementToResultModel(iwbElementPart);
+        }
     }
     
     if (!bRes) 

@@ -62,7 +62,7 @@ private:
 
         bool createBackground(const QDomElement &element);
         QString createBackgroundImage(const QDomElement &element, QSize size);
-        bool createPngFromSvg(QString &svgPath, QString &dstPath,  QTransform transformation);
+        bool createPngFromSvg(QString &svgPath, QString &dstPath,  QTransform transformation, QSize size = QSize());
 
         bool parseSVGGGroup(const QDomElement &element);
         bool parseUBZImage(const QDomElement &element);
@@ -81,6 +81,7 @@ private:
         QString getDstContentFolderName(const QString &elementType);
         QString getSrcContentFolderName(QString href);
         QString getFileNameFromPath(QString sPath);
+        QString getExtentionFromFileName(const QString &filename);
         QString convertExtention(const QString &ext);
         QString getElementTypeFromUBZ(const QDomElement &element);
 
