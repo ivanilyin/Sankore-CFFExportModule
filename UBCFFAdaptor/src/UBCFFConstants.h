@@ -3,8 +3,8 @@
 
 #define PI 3.1415926535
 
-const int DEFAULT_BACKGROUND_LAYER = -100002;
-const int DEFAULT_BACKGROUND_CROSS_LAYER = -100001;
+const int DEFAULT_BACKGROUND_LAYER = -20000002;
+const int DEFAULT_BACKGROUND_CROSS_LAYER = -20000001;
 
 // Constant names. Use only them instead const char* in each function
 

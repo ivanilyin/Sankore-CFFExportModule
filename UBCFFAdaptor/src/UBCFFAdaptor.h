@@ -52,30 +52,29 @@ private:
 
         bool parseMetadata();
         bool parseContent();
-        bool parsePageset(const QStringList &pageFileNames);
-        bool parsePage(const QString &pageFileName);
-        bool parseSvgPageSection(const QDomElement &element);
+        QDomElement parsePageset(const QStringList &pageFileNames);
+        QDomElement parsePage(const QString &pageFileName);
+        QDomElement parseSvgPageSection(const QDomElement &element);
         void writeQDomElementToXML(const QDomNode &node);
-        bool writeSVGIwbPageSection();
         bool writeExtendedIwbSection();
         bool parseGroupPageSection(const QDomElement &element);
 
-        bool createBackground(const QDomElement &element);
+        bool createBackground(const QDomElement &element, QMultiMap<int, QDomElement> &dstSvgList);
         QString createBackgroundImage(const QDomElement &element, QSize size);
         bool createPngFromSvg(QString &svgPath, QString &dstPath,  QTransform transformation, QSize size = QSize());
 
-        bool parseSVGGGroup(const QDomElement &element);
-        bool parseUBZImage(const QDomElement &element);
-        bool parseUBZVideo(const QDomElement &element);
-        bool parseUBZAudio(const QDomElement &element);
-        bool parseForeignObject(const QDomElement &element);
-        bool parseUBZText(const QDomElement &element);
+        bool parseSVGGGroup(const QDomElement &element, QMultiMap<int, QDomElement> &dstSvgList);
+        bool parseUBZImage(const QDomElement &element, QMultiMap<int, QDomElement> &dstSvgList);
+        bool parseUBZVideo(const QDomElement &element, QMultiMap<int, QDomElement> &dstSvgList);
+        bool parseUBZAudio(const QDomElement &element, QMultiMap<int, QDomElement> &dstSvgList);
+        bool parseForeignObject(const QDomElement &element, QMultiMap<int, QDomElement> &dstSvgList);
+        bool parseUBZText(const QDomElement &element, QMultiMap<int, QDomElement> &dstSvgList);
 
-        bool parseUBZPolygon(const QDomElement &element, QMultiMap<int, QDomElement> &dstSvgList, QList<QDomElement> &dstIwbList);
-        bool parseUBZPolyline(const QDomElement &element, QMultiMap<int, QDomElement> &dstSvgList, QList<QDomElement> &dstIwbList);
-        bool parseUBZLine(const QDomElement &element, QMultiMap<int, QDomElement> &dstSvgList, QList<QDomElement> &dstIwbList);       
+        bool parseUBZPolygon(const QDomElement &element, QMultiMap<int, QDomElement> &dstSvgList);
+        bool parseUBZPolyline(const QDomElement &element, QMultiMap<int, QDomElement> &dstSvgList);
+        bool parseUBZLine(const QDomElement &element, QMultiMap<int, QDomElement> &dstSvgList);       
         void addSVGElementToResultModel(const QDomElement &element, QMultiMap<int, QDomElement> &dstList, int layer = DEFAULT_LAYER);
-        void addIWBElementToResultModel(const QDomElement &element, QList<QDomElement> &dstList);
+        void addIWBElementToResultModel(const QDomElement &element);
 
         qreal getAngleFromTransform(const QTransform &tr);
         QString getDstContentFolderName(const QString &elementType);
@@ -106,6 +105,7 @@ private:
 
         bool setCFFAttribute(const QString &attributeName, const QString &attributeValue, const QDomElement &ubzElement, QDomElement &iwbElement,  QDomElement &svgElement);
         bool setCommonAttributesFromUBZ(const QDomElement &ubzElement, QDomElement &iwbElement,  QDomElement &svgElement);
+        void setViewBox(QRect viewbox);
 
         QDomNode findTextNode(const QDomNode &node);
         QDomNode findNodeByTagName(const QDomNode &node, QString tagName);
