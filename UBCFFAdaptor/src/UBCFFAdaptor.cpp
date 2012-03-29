@@ -522,6 +522,7 @@ QDomElement UBCFFAdaptor::UBToCFFConverter::parsePage(const QString &pageFileNam
     }
 
     QDomElement page;
+    QDomElement group;
 
     QDomElement nextTopElement = mDataModel->firstChildElement();
     while (!nextTopElement.isNull()) {
@@ -529,11 +530,14 @@ QDomElement UBCFFAdaptor::UBToCFFConverter::parsePage(const QString &pageFileNam
         if (tagname == tSvg) {
             page = parseSvgPageSection(nextTopElement);
             if (page.isNull()) {
+                qDebug() << "The page is empty.";
                 pageFile.close();
                 return QDomElement();
             }
         } else if (tagname == tUBZGroup) {
-            if (!parseGroupPageSection(nextTopElement)) {
+            group = parseGroupPageSection(nextTopElement);
+            if (group.isNull()) {
+                qDebug() << "Page doesn't contains any groups.";
                 pageFile.close();
                 return QDomElement();
             }
@@ -575,19 +579,12 @@ QDomElement UBCFFAdaptor::UBToCFFConverter::parsePageset(const QStringList &page
 
     QDomElement svgPagesetElement = mDocumentToWrite->createElementNS(svgIWBNS,":"+ tIWBPageSet);
 
-    QList<int> layers;
     QMapIterator<int, QDomElement> nextSVGElement(pageList);
-    while (nextSVGElement.hasNext()) 
-        layers << nextSVGElement.next().key();
-
-    qSort(layers);
-    int layer = layers.at(0);
-
     nextSVGElement.toFront();
     while (nextSVGElement.hasNext()) 
         svgPagesetElement.appendChild(nextSVGElement.next().value());
 
-    return svgPagesetElement;
+    return svgPagesetElement.hasChildNodes() ? svgPagesetElement : QDomElement();
 }
 QDomElement UBCFFAdaptor::UBToCFFConverter::parseSvgPageSection(const QDomElement &element)
 {
@@ -627,19 +624,13 @@ QDomElement UBCFFAdaptor::UBToCFFConverter::parseSvgPageSection(const QDomElemen
 
     // to do:
     // there we must to sort elements (take elements from list and assign parent ordered like in parseSVGGGroup)
-    QList<int> layers;
+    // we returns just element because we don't care about layer.
     QMapIterator<int, QDomElement> nextSVGElement(svgElements);
-    while (nextSVGElement.hasNext()) 
-        layers << nextSVGElement.next().key();
-
-    qSort(layers);
-    int layer = layers.at(0);
-
     nextSVGElement.toFront();
     while (nextSVGElement.hasNext()) 
         svgElementPart.appendChild(nextSVGElement.next().value());
  
-    return svgElementPart;
+    return svgElementPart.hasChildNodes() ? svgElementPart : QDomElement();
 }
 
 void UBCFFAdaptor::UBToCFFConverter::writeQDomElementToXML(const QDomNode &node)
@@ -688,12 +679,12 @@ bool UBCFFAdaptor::UBToCFFConverter::writeExtendedIwbSection()
 // extended element options
 // editable, background, locked are supported for now
 
-bool UBCFFAdaptor::UBToCFFConverter::parseGroupPageSection(const QDomElement &element)
+QDomElement UBCFFAdaptor::UBToCFFConverter::parseGroupPageSection(const QDomElement &element)
 {
 //    First sankore side implementation needed. TODO in Sankore 1.5
     Q_UNUSED(element)
     qDebug() << "parsing ubz group section";
-    return true;
+    return QDomElement();
 }
 
 QString UBCFFAdaptor::UBToCFFConverter::getDstContentFolderName(const QString &elementType)
@@ -829,7 +820,6 @@ QString UBCFFAdaptor::UBToCFFConverter::getElementTypeFromUBZ(const QDomElement 
 int UBCFFAdaptor::UBToCFFConverter::getElementLayer(const QDomElement &element)
 {
     int iRetLayer = 0;
-    int zLayer = 0;
     if (element.hasAttribute(aZLayer))
         iRetLayer = (int)element.attribute(aZLayer).toDouble();
     else 
@@ -1071,7 +1061,10 @@ bool UBCFFAdaptor::UBToCFFConverter::setContentFromUBZ(const QDomElement &ubzEle
         }
 
         if (bRet)
+        {
             svgElement.setAttribute(aSVGHref, sDstContentFolder+"/"+sDstFileName);
+            svgElement.setAttribute(aSVGRequiredExtension, svgRequiredExtensionPrefix+fileExtention);
+        }
     }
     else
     if (itIsFormatToConvert(fileExtention)) // we cannot copy that source files. We need to create dst. file from src. file without copy. 
@@ -1095,7 +1088,10 @@ bool UBCFFAdaptor::UBToCFFConverter::setContentFromUBZ(const QDomElement &ubzEle
             }
 
             if (bRet)
+            {
                 svgElement.setAttribute(aSVGHref, sDstContentFolder+"/"+sDstFileName);
+                svgElement.setAttribute(aSVGRequiredExtension, svgRequiredExtensionPrefix+fePng);
+            }
         }
     }
    

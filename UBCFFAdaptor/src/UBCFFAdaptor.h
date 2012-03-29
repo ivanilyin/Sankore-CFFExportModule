@@ -57,7 +57,7 @@ private:
         QDomElement parseSvgPageSection(const QDomElement &element);
         void writeQDomElementToXML(const QDomNode &node);
         bool writeExtendedIwbSection();
-        bool parseGroupPageSection(const QDomElement &element);
+        QDomElement parseGroupPageSection(const QDomElement &element);
 
         bool createBackground(const QDomElement &element, QMultiMap<int, QDomElement> &dstSvgList);
         QString createBackgroundImage(const QDomElement &element, QSize size);

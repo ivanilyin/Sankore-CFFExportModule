@@ -75,6 +75,7 @@ const QString aSVGHref = "xlink:href"; // reference to file
 const QString aIWBHref = "ref"; // reference to element ID
 const QString aUBZHref = "href";
 const QString aSrc = "src";
+const QString aSVGRequiredExtension = "requiredExtensions";
 
 const QString aX = "x";
 const QString aY = "y";
@@ -98,6 +99,7 @@ const QString avFalse = "false";
 const QString avTrue = "true";
 
 // Namespaces and prefixes
+const QString svgRequiredExtensionPrefix = "http://www.imsglobal.org/iwb/";
 const QString dcNS = "http://purl.org/dc/elements/1.1/";
 const QString ubNS = "http://uniboard.mnemis.com/document";
 const QString svgUBZNS = "http://www.imsglobal.org/xsd/iwb_v1p0";
