@@ -1073,7 +1073,7 @@ bool UBCFFAdaptor::UBToCFFConverter::setContentFromUBZ(const QDomElement &ubzEle
         if (bRet)
         {
             svgElement.setAttribute(aSVGHref, sDstContentFolder+"/"+sDstFileName);
-            svgElement.setAttribute(aSVGRequiredExtension, svgRequiredExtensionPrefix+fileExtention);
+            svgElement.setAttribute(aSVGRequiredExtension, svgRequiredExtensionPrefix+convertExtention(fileExtention));
         }
     }
     else

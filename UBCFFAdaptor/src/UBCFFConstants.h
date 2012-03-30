@@ -365,7 +365,7 @@ font-stretch, \
 text-align \
 ");
 
-const QString ubzContentFolders("audios,videos,images");
+const QString ubzContentFolders("audios,videos,images,widgets");
 
 struct UBItemLayerType
 {
