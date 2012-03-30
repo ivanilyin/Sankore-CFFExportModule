@@ -616,6 +616,9 @@ QDomElement UBCFFAdaptor::UBToCFFConverter::parseSvgPageSection(const QDomElemen
         else if (tagName == tUBZVideo)         parseUBZVideo(nextElement, svgElements);
         else if (tagName == tUBZAudio)         parseUBZAudio(nextElement, svgElements);
         else if (tagName == tUBZForeignObject) parseForeignObject(nextElement, svgElements);
+        else if (tagName == tUBZLine)          parseUBZLine(nextElement, svgElements);
+        else if (tagName == tUBZPolygon)       parseUBZPolygon(nextElement, svgElements);
+        else if (tagName == tUBZPolyline)      parseUBZPolyline(nextElement, svgElements);
 
         nextElement = nextElement.nextSiblingElement();
     }
