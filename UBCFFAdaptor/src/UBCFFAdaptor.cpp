@@ -55,6 +55,7 @@ bool UBCFFAdaptor::convertUBZToIWB(const QString &from, const QString &to)
         qDebug() << "error in compression";
 
     //Cleanning tmp souces in filesystem
+    if (!QFileInfo(from).isDir())
     if (!freeDir(source))
         qDebug() << "can't delete tmp directory" << QDir(source).absolutePath() << "try to delete them manually";
 
@@ -712,13 +713,22 @@ QString UBCFFAdaptor::UBToCFFConverter::getSrcContentFolderName(QString href)
     QString sRet;
 
     QStringList ls = href.split("/");
-    if (0 < ls.count())
-        sRet = ls.at(ls.count()-1);
-    
-    sRet = href.remove(sRet);
+    for (int i = 0; i < ls.count()-1; i++)
+    {
+        QString sPart = ls.at(i);
+        if (ubzContentFolders.contains(sPart))
+        {
+            sRet = sPart;
+        }
+    }
 
-    if (sRet.endsWith("/"))
-        sRet.remove("/");
+//     if (0 < ls.count())
+//         sRet = ls.at(ls.count()-1);
+//     
+//     sRet = href.remove(sRet);
+// 
+//     if (sRet.endsWith("/"))
+//         sRet.remove("/");
 
     return sRet;   
 }
@@ -1601,7 +1611,7 @@ bool UBCFFAdaptor::UBToCFFConverter::parseUBZAudio(const QDomElement &element, Q
     {
         //we must create image-containers for audio files
         int audioImageDimention = qMin(svgElementPart.attribute(aWidth).toInt(), svgElementPart.attribute(aHeight).toInt());
-        QString srcAudioImageFile(QCoreApplication::applicationDirPath()+sAudioElementImage);
+        QString srcAudioImageFile(sAudioElementImage);
         QString elementId = QString(QUuid::createUuid().toString()).remove("{").remove("}");
         QString sDstAudioImageFileName = elementId+"."+fePng;
         QString dstAudioImageFilePath = destinationPath+"/"+cfImages+"/"+sDstAudioImageFileName;

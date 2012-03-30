@@ -12,7 +12,7 @@ const int DEFAULT_BACKGROUND_CROSS_LAYER = -20000001;
 const QString fMetadata = "metadata.rdf";
 const QString fIWBContent = "content.xml";
 const QString fIWBBackground = "background.png";
-const QString sAudioElementImage = "/resources/images/soundOn.svg";
+const QString sAudioElementImage = ":images/soundOn.svg";
 
 // Constant messages;
 const QString noErrorMsg = "NoError";
@@ -365,7 +365,7 @@ font-stretch, \
 text-align \
 ");
 
-
+const QString ubzContentFolders("audios,videos,images");
 
 struct UBItemLayerType
 {
