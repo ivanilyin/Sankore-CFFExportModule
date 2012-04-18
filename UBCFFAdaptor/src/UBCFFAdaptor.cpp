@@ -1280,17 +1280,8 @@ bool UBCFFAdaptor::UBToCFFConverter::setCommonAttributesFromUBZ(const QDomElemen
 
 void UBCFFAdaptor::UBToCFFConverter::setViewBox(QRect viewbox)
 {
-    if (viewbox.x() < mViewbox.x())
-        mViewbox.setX(viewbox.x());
 
-    if (viewbox.y() < mViewbox.y())
-        mViewbox.setY(viewbox.y());
-
-    if (viewbox.height() > mViewbox.height())
-        mViewbox.setHeight(viewbox.height());
-
-    if (viewbox.width() > mViewbox.width())
-        mViewbox.setWidth(viewbox.width());
+    mViewbox |= viewbox;
 }
 
 QDomNode UBCFFAdaptor::UBToCFFConverter::findTextNode(const QDomNode &node)
