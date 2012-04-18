@@ -443,7 +443,6 @@ bool UBCFFAdaptor::UBToCFFConverter::parseMetadata()
                     QSize tmpSize = getSVGDimentions(nextInElement.text());
                     if (!tmpSize.isNull()) {
                         mSVGSize = tmpSize;
-                        mViewbox.setRect(0,0, tmpSize.width(), tmpSize.height());
                     } else {
                         qDebug() << "can't interpret svg section size";
                         errorStr = "InterpretSvgSizeError";
@@ -487,6 +486,11 @@ bool UBCFFAdaptor::UBToCFFConverter::parseContent() {
     }
 
     
+    if (QRect() == mViewbox)
+    {
+        mViewbox.setRect(0,0, mSVGSize.width(), mSVGSize.height());
+    }
+
     svgDocumentSection.setAttribute(aIWBViewBox, rectToIWBAttr(mViewbox));
     svgDocumentSection.setAttribute(aWidth, QString("%1").arg(mViewbox.width()));
     svgDocumentSection.setAttribute(aHeight, QString("%1").arg(mViewbox.height()));
@@ -1276,7 +1280,17 @@ bool UBCFFAdaptor::UBToCFFConverter::setCommonAttributesFromUBZ(const QDomElemen
 
 void UBCFFAdaptor::UBToCFFConverter::setViewBox(QRect viewbox)
 {
-    mViewbox |= viewbox;
+    if (viewbox.x() < mViewbox.x())
+        mViewbox.setX(viewbox.x());
+
+    if (viewbox.y() < mViewbox.y())
+        mViewbox.setY(viewbox.y());
+
+    if (viewbox.height() > mViewbox.height())
+        mViewbox.setHeight(viewbox.height());
+
+    if (viewbox.width() > mViewbox.width())
+        mViewbox.setWidth(viewbox.width());
 }
 
 QDomNode UBCFFAdaptor::UBToCFFConverter::findTextNode(const QDomNode &node)
