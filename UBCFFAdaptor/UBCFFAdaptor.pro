@@ -41,6 +41,9 @@ HEADERS +=\
     src/UBGlobals.h \
     src/UBCFFConstants.h
 
+RESOURCES += \
+    ../resources/resources.qrc
+
 unix:!symbian {
     maemo5 {
         target.path = /opt/usr/lib

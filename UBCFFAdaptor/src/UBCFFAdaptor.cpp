@@ -1028,8 +1028,6 @@ void UBCFFAdaptor::UBToCFFConverter::setCoordinatesFromUBZ(const QDomElement &ub
 
     item.setRect(0,0, width, height);
     item.setTransform(tr);
-
-    item.setTransformOriginPoint(item.boundingRect().center());
     item.setRotation(-alpha);
     QMatrix sceneMatrix = item.sceneMatrix();
  
@@ -1110,6 +1108,9 @@ bool UBCFFAdaptor::UBToCFFConverter::setContentFromUBZ(const QDomElement &ubzEle
                 svgElement.setAttribute(aSVGRequiredExtension, svgRequiredExtensionPrefix+fePng);
             }
         }
+    }else
+    {
+        bRet = false;
     }
    
     if (!bRet)
@@ -1156,7 +1157,10 @@ void UBCFFAdaptor::UBToCFFConverter::setCFFTextFromHTMLTextNode(const QDomElemen
             else
             if (spanNode.isElement())
             {      
+                QDomElement pElementIwb;
                 QDomElement spanElement = textDoc.createElementNS(svgIWBNS,svgIWBNSPrefix + ":" + tIWBTspan);
+                setCommonAttributesFromUBZ(htmlPNode.toElement(), pElementIwb, spanElement);
+
                 if (spanNode.hasAttributes())
                 {       
                     int attrCount = spanNode.attributes().count();
@@ -1199,6 +1203,8 @@ QString UBCFFAdaptor::UBToCFFConverter::ubzAttrNameToCFFAttrName(QString cffAttr
     QString sRet = cffAttrName;
     if (QString("color") == cffAttrName)
         sRet = QString("fill");
+    if (QString("align") == cffAttrName)
+        sRet = QString("text-align");
 
     return sRet;
 }
@@ -1327,7 +1333,7 @@ QDomNode UBCFFAdaptor::UBToCFFConverter::findNodeByTagName(const QDomNode &node,
             if (!iterNode.firstChildElement().isNull())
             {
                 QDomNode foundNode = findNodeByTagName(iterNode.firstChildElement(), tagName);
-                if (!foundNode.isNull())
+                if (!foundNode.isNull()){
                     if (foundNode.isElement())
                     {
                         if (tagName == foundNode.toElement().tagName())
@@ -1335,6 +1341,7 @@ QDomNode UBCFFAdaptor::UBToCFFConverter::findNodeByTagName(const QDomNode &node,
                     }
                     else
                         break;
+                }
             }
         }
         
